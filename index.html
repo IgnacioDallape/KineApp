@@ -3,1026 +3,924 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flujo â€” Planificador Financiero</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<style>
-:root {
-  --bg: #f5f4f0;
-  --bg2: #ffffff;
-  --bg3: #f0eeea;
-  --bg4: #e8e6e1;
-  --border: rgba(0,0,0,0.07);
-  --border2: rgba(0,0,0,0.13);
-  --text: #1a1814;
-  --text2: #5a5650;
-  --text3: #9a9690;
-  --accent: #1a6b3a;
-  --accent2: #14552e;
-  --accent-dim: rgba(26,107,58,0.10);
-  --accent-dim2: rgba(26,107,58,0.05);
-  --red: #c0392b;
-  --red-dim: rgba(192,57,43,0.09);
-  --amber: #b7600a;
-  --amber-dim: rgba(183,96,10,0.09);
-  --blue: #1a5fa8;
-  --blue-dim: rgba(26,95,168,0.09);
-  --radius: 14px;
-  --radius-sm: 8px;
-  --font-display: 'DM Serif Display', serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'DM Mono', monospace;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 14px;
-  min-height: 100vh;
-  line-height: 1.5;
-}
-
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; border: 1px solid var(--bg3); }
-
-/* LAYOUT */
-.app { display: grid; grid-template-columns: 220px 1fr; grid-template-rows: auto 1fr; min-height: 100vh; }
-
-/* TOPBAR */
-.topbar {
-  grid-column: 1 / -1;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 28px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
-  position: sticky; top: 0; z-index: 100;
-}
-.logo {
-  font-family: var(--font-display);
-  font-size: 22px;
-  color: var(--text);
-  letter-spacing: -0.5px;
-  display: flex; align-items: center; gap: 10px;
-}
-.logo-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px rgba(26,107,58,0.4);
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-.saldo-pill {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--accent-dim2);
-  border: 1px solid rgba(26,107,58,0.18);
-  border-radius: 100px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 500;
-}
-.saldo-pill span { color: var(--accent); font-family: var(--font-mono); font-size: 13px; }
-.saldo-label { color: var(--text3); font-size: 11px; }
-
-/* SIDEBAR */
-.sidebar {
-  background: var(--bg);
-  border-right: 1px solid var(--border);
-  padding: 24px 0;
-  position: sticky;
-  top: 61px;
-  height: calc(100vh - 61px);
-  overflow-y: auto;
-}
-.nav-section {
-  padding: 0 12px;
-  margin-bottom: 6px;
-}
-.nav-label {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--text3);
-  padding: 0 10px;
-  margin-bottom: 6px;
-  margin-top: 16px;
-}
-.nav-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--text2);
-  font-size: 13px;
-  font-weight: 400;
-  transition: all .15s;
-  position: relative;
-}
-.nav-item:hover { background: var(--bg3); color: var(--text); }
-.nav-item.active { background: var(--accent-dim); color: var(--accent); font-weight: 500; }
-.nav-item.active::before {
-  content: '';
-  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  width: 3px; height: 60%;
-  background: var(--accent);
-  border-radius: 0 3px 3px 0;
-}
-.nav-icon { font-size: 16px; width: 20px; text-align: center; }
-.nav-badge {
-  margin-left: auto;
-  background: var(--red-dim);
-  color: var(--red);
-  font-size: 10px;
-  font-weight: 500;
-  padding: 2px 7px;
-  border-radius: 100px;
-  font-family: var(--font-mono);
-}
-
-/* MAIN */
-.main {
-  background: var(--bg);
-  padding: 32px 36px;
-  overflow-y: auto;
-}
-
-/* PAGE HEADER */
-.page-header {
-  margin-bottom: 28px;
-  animation: fadeIn .3s ease;
-}
-.page-title {
-  font-family: var(--font-display);
-  font-size: 28px;
-  color: var(--text);
-  letter-spacing: -0.5px;
-  margin-bottom: 4px;
-}
-.page-sub { color: var(--text3); font-size: 13px; }
-
-@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-
-/* METRICS GRID */
-.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.metric-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color .2s;
-}
-.metric-card:hover { border-color: var(--border2); }
-.metric-card::after {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-}
-.metric-card.green::after { background: linear-gradient(90deg, var(--accent), transparent); }
-.metric-card.red::after { background: linear-gradient(90deg, var(--red), transparent); }
-.metric-card.blue::after { background: linear-gradient(90deg, var(--blue), transparent); }
-.metric-card.amber::after { background: linear-gradient(90deg, var(--amber), transparent); }
-.metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
-.metric-value { font-family: var(--font-mono); font-size: 22px; font-weight: 500; color: var(--text); line-height: 1; }
-.metric-value.green { color: var(--accent); }
-.metric-value.red { color: var(--red); }
-.metric-value.blue { color: var(--blue); }
-.metric-value.amber { color: var(--amber); }
-.metric-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
-
-/* ALERTS */
-.alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-.alert {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  line-height: 1.5;
-  border: 1px solid;
-  animation: slideIn .3s ease;
-}
-@keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
-.alert.danger { background: var(--red-dim); border-color: rgba(192,57,43,0.25); color: #8b1a10; }
-.alert.warning { background: var(--amber-dim); border-color: rgba(183,96,10,0.25); color: #7a3d00; }
-.alert.success { background: var(--accent-dim2); border-color: rgba(26,107,58,0.2); color: var(--accent); }
-.alert-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
-
-/* CARD */
-.card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 20px;
-  transition: border-color .2s;
-}
-.card:hover { border-color: var(--border2); }
-.card-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-.card-title { font-size: 13px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
-.card-body { padding: 20px; }
-
-/* GRID 2 */
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-
-/* TABLE */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th {
-  text-align: left;
-  padding: 10px 16px;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: var(--text3);
-  border-bottom: 1px solid var(--border);
-}
-td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-  vertical-align: middle;
-}
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--bg3); }
-tr.paid td { opacity: .35; text-decoration: line-through; }
-.mono { font-family: var(--font-mono); font-size: 13px; }
-
-/* BADGES */
-.badge {
-  display: inline-flex; align-items: center;
-  padding: 3px 9px;
-  border-radius: 100px;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .03em;
-  font-family: var(--font-mono);
-}
-.badge-red { background: var(--red-dim); color: var(--red); }
-.badge-amber { background: var(--amber-dim); color: var(--amber); }
-.badge-green { background: var(--accent-dim); color: var(--accent); }
-.badge-blue { background: var(--blue-dim); color: var(--blue); }
-.badge-gray { background: var(--bg4); color: var(--text3); }
-
-/* BUTTONS */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  background: transparent;
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-sm);
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: var(--font-body);
-  color: var(--text2);
-  cursor: pointer;
-  transition: all .15s;
-  white-space: nowrap;
-}
-.btn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
-.btn:active { transform: scale(0.97); }
-.btn-accent { background: var(--accent); color: #0d0f14; border-color: var(--accent); font-weight: 500; }
-.btn-accent:hover { background: var(--accent2); border-color: var(--accent2); color: #0d0f14; }
-.btn-ghost { border-color: transparent; }
-.btn-ghost:hover { background: var(--bg3); }
-.btn-danger { border-color: rgba(255,107,107,0.3); color: var(--red); }
-.btn-danger:hover { background: var(--red-dim); }
-.btn-success { border-color: rgba(200,240,96,0.3); color: var(--accent); }
-.btn-success:hover { background: var(--accent-dim); }
-.btn-sm { padding: 5px 10px; font-size: 11px; }
-.btn-icon { padding: 6px; width: 30px; height: 30px; }
-
-/* FORM */
-.form-grid { display: grid; gap: 12px; margin-bottom: 16px; }
-.form-row2 { grid-template-columns: 1fr 1fr; }
-.form-row3 { grid-template-columns: 1fr 1fr 1fr; }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-label { font-size: 11px; color: var(--text3); letter-spacing: .04em; text-transform: uppercase; }
-.form-input {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 9px 12px;
-  font-size: 13px;
-  font-family: var(--font-body);
-  color: var(--text);
-  transition: border-color .15s;
-  width: 100%;
-}
-.form-input:focus { outline: none; border-color: rgba(26,107,58,0.4); }
-.form-input::placeholder { color: var(--text3); }
-select.form-input { cursor: pointer; }
-select.form-input option { background: var(--bg3); color: var(--text); }
-.form-actions { display: flex; gap: 8px; justify-content: flex-end; }
-
-/* COLLAPSIBLE FORM */
-.form-panel {
-  border-top: 1px solid var(--border);
-  padding: 20px;
-  background: var(--bg3);
-  display: none;
-}
-.form-panel.open { display: block; }
-
-/* CHART */
-.chart-wrap { position: relative; width: 100%; }
-
-/* AI CHAT */
-.ai-wrap { display: flex; flex-direction: column; gap: 0; }
-.ai-messages { display: flex; flex-direction: column; gap: 12px; min-height: 120px; padding: 20px; }
-.ai-msg {
-  max-width: 82%;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 13px;
-  line-height: 1.65;
-  animation: fadeIn .25s ease;
-}
-.ai-msg.bot {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  align-self: flex-start;
-  border-bottom-left-radius: 4px;
-}
-.ai-msg.user {
-  background: var(--accent-dim);
-  border: 1px solid rgba(26,107,58,0.2);
-  color: var(--accent);
-  align-self: flex-end;
-  border-bottom-right-radius: 4px;
-}
-.ai-msg.loading { color: var(--text3); font-style: italic; }
-.ai-footer {
-  border-top: 1px solid var(--border);
-  padding: 14px 20px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.ai-input-row { display: flex; gap: 8px; }
-.ai-input {
-  flex: 1;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 13px;
-  font-family: var(--font-body);
-  color: var(--text);
-  transition: border-color .15s;
-}
-.ai-input:focus { outline: none; border-color: rgba(26,107,58,0.35); }
-.ai-input::placeholder { color: var(--text3); }
-.ai-quickbtns { display: flex; flex-wrap: wrap; gap: 6px; }
-.ai-qbtn {
-  background: var(--bg4);
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  padding: 5px 12px;
-  font-size: 11px;
-  color: var(--text2);
-  cursor: pointer;
-  font-family: var(--font-body);
-  transition: all .15s;
-}
-.ai-qbtn:hover { background: var(--accent-dim); border-color: rgba(26,107,58,0.25); color: var(--accent); }
-
-/* DISPONIBLE EDITOR */
-.disp-row { display: flex; align-items: center; gap: 10px; }
-.disp-input {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 7px 12px;
-  font-size: 14px;
-  font-family: var(--font-mono);
-  color: var(--accent);
-  width: 180px;
-  transition: border-color .15s;
-}
-.disp-input:focus { outline: none; border-color: rgba(26,107,58,0.4); }
-
-/* FLUJO TABLE COLOR */
-.flujo-pos { color: var(--accent); font-family: var(--font-mono); }
-.flujo-neg { color: var(--red); font-family: var(--font-mono); }
-.flujo-saldo-pos { color: var(--accent); font-family: var(--font-mono); font-weight: 500; text-align: right; }
-.flujo-saldo-neg { color: var(--red); font-family: var(--font-mono); font-weight: 500; text-align: right; }
-
-/* EMPTY STATE */
-.empty {
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--text3);
-  font-size: 13px;
-}
-.empty-icon { font-size: 28px; margin-bottom: 8px; opacity: .4; }
-
-/* SECTION HIDDEN */
-.page { display: none; }
-.page.active { display: block; animation: fadeIn .25s ease; }
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-  .app { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
-  .main { padding: 20px 16px; }
-  .grid2 { grid-template-columns: 1fr; }
-  .form-row2, .form-row3 { grid-template-columns: 1fr; }
-}
-</style>
+<title>KineApp — Centro Kinesiológico</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-
 <div class="app">
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="logo">
-      <div class="logo-dot"></div>
-      flujo
-    </div>
-    <div class="topbar-right">
-      <div class="saldo-pill">
-        <span class="saldo-label">Disponible</span>
-        <span id="top-saldo">$0</span>
-      </div>
-      <button class="btn btn-sm" onclick="exportJSON()">â†“ Exportar</button>
-    </div>
-  </header>
 
-  <!-- SIDEBAR -->
-  <nav class="sidebar">
-    <div class="nav-section">
-      <div class="nav-item active" onclick="navigate('dashboard', this)">
-        <span class="nav-icon">â—ˆ</span> Dashboard
-      </div>
-      <div class="nav-item" onclick="navigate('cobros', this)">
-        <span class="nav-icon">â†“</span> Cobros
-      </div>
-      <div class="nav-item" onclick="navigate('pagos', this)" id="nav-pagos">
-        <span class="nav-icon">â†‘</span> Pagos
-      </div>
-      <div class="nav-item" onclick="navigate('flujo', this)">
-        <span class="nav-icon">ã€œ</span> Flujo
-      </div>
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>KineApp</h1>
+    <p>Centro Kinesiológico</p>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="icon">??</span><span>Dashboard</span>
     </div>
-    <div class="nav-section">
-      <div class="nav-label">Herramientas</div>
-      <div class="nav-item" onclick="navigate('ia', this)">
-        <span class="nav-icon">â—Ž</span> Asistente IA
-      </div>
-      <div class="nav-item" onclick="navigate('config', this)">
-        <span class="nav-icon">âŠ™</span> Configurar
-      </div>
+    <div class="nav-item" onclick="navigate('agenda')">
+      <span class="icon">??</span><span>Agenda</span>
+    </div>
+    <div class="nav-item" onclick="navigate('pacientes')">
+      <span class="icon">??</span><span>Pacientes</span>
+    </div>
+    <div class="nav-item" onclick="navigate('asistencia')">
+      <span class="icon">?</span><span>Asistencia</span>
+    </div>
+    <div class="nav-item" onclick="navigate('pagos')">
+      <span class="icon">??</span><span>Gastos</span>
+    </div>
+    <div class="nav-item" onclick="navigate('cobranzas')">
+      <span class="icon">??</span><span>Cobranzas</span>
+    </div>
+    <div class="nav-item" onclick="navigate('recordatorios')">
+      <span class="icon">??</span><span>Recordatorios</span>
+    </div>
+    <div class="nav-item" onclick="navigate('servicios')">
+      <span class="icon">??</span><span>Servicios</span>
     </div>
   </nav>
+  <div class="sidebar-footer">v1.0 · 2025</div>
+</aside>
 
-  <!-- MAIN CONTENT -->
-  <main class="main">
+<!-- MAIN -->
+<main class="main">
 
-    <!-- DASHBOARD -->
-    <div class="page active" id="page-dashboard">
-      <div class="page-header">
-        <div class="page-title">Buen dÃ­a, Ignacio</div>
-        <div class="page-sub" id="dash-date"></div>
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div>
+        <h2>Dashboard</h2>
+        <p id="hoy-fecha">Cargando...</p>
       </div>
-      <div class="metrics" id="dash-metrics"></div>
-      <div class="alerts" id="dash-alerts"></div>
-      <div class="grid2">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Flujo acumulado</span></div>
-          <div class="card-body" style="padding:16px">
-            <div class="chart-wrap" style="height:200px"><canvas id="chart-flujo" role="img" aria-label="GrÃ¡fico flujo de caja"></canvas></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">ComposiciÃ³n de pagos</span></div>
-          <div class="card-body" style="padding:16px">
-            <div class="chart-wrap" style="height:200px"><canvas id="chart-cats" role="img" aria-label="GrÃ¡fico categorÃ­as de pagos"></canvas></div>
-          </div>
-        </div>
+      <button class="btn btn-primary" onclick="openModal('modal-turno')">+ Nuevo turno</button>
+    </div>
+    <div class="grid-4" style="margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--primary)" id="stat-hoy">8</div>
+        <div class="stat-label">Turnos hoy</div>
+        <div class="stat-trend up">? 2 más que ayer</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--green)" id="stat-pac">47</div>
+        <div class="stat-label">Pacientes activos</div>
+        <div class="stat-trend up">? 3 este mes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--orange)" id="stat-pend">3</div>
+        <div class="stat-label">Pagos pendientes</div>
+        <div class="stat-trend down">? revisar</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--teal)" id="stat-adh">86%</div>
+        <div class="stat-label">Adherencia semanal</div>
+        <div class="stat-trend up">? buena tendencia</div>
+      </div>
+    </div>
+    <div id="alertas-sesiones-dash" style="display:none;margin-bottom:16px"></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Turnos de hoy</div>
+        <div id="turnos-hoy-list"></div>
       </div>
       <div class="card">
-        <div class="card-header"><span class="card-title">PrÃ³ximos vencimientos</span></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Concepto</th><th>Vence</th><th>Monto</th><th>Urgencia</th></tr></thead>
-          <tbody id="dash-upcoming"></tbody>
-        </table></div>
+        <div class="card-title">Últimos movimientos de caja</div>
+        <div id="caja-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENDA -->
+  <div class="page" id="page-agenda">
+    <div class="page-header">
+      <div><h2>Agenda</h2><p>Vista semanal por profesional</p></div>
+      <div style="display:flex;gap:8px">
+        <select class="form-control" id="agenda-prof" style="width:160px">
+          <option>Todos</option>
+          <option>Lic. García</option>
+          <option>Lic. Romero</option>
+          <option>Lic. Paz</option>
+        </select>
+        <button class="btn btn-primary" onclick="openModal('modal-turno')">+ Turno</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="week-nav">
+          <button onclick="changeWeek(-1)">‹</button>
+          <span class="week-date" id="week-label">Semana actual</span>
+          <button onclick="changeWeek(1)">›</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button class="filtro-act active" data-serv="" onclick="setFiltroActividad(this,'')">Todos</button>
+          <button class="filtro-act" data-serv="rehab" onclick="setFiltroActividad(this,'rehab')" style="--fc:var(--primary)">? Rehabilitación</button>
+          <button class="filtro-act" data-serv="gym" onclick="setFiltroActividad(this,'gym')" style="--fc:var(--teal)">? Readaptación</button>
+          <button class="filtro-act" data-serv="recovery" onclick="setFiltroActividad(this,'recovery')" style="--fc:var(--purple)">? Recovery</button>
+          <button class="filtro-act" data-serv="pilates" onclick="setFiltroActividad(this,'pilates')" style="--fc:var(--orange)">? Pilates</button>
+          <button class="filtro-act" data-serv="funcional" onclick="setFiltroActividad(this,'funcional')" style="--fc:var(--green)">? Funcional</button>
+        </div>
+      </div>
+      <div style="padding:16px;overflow-x:auto">
+        <div class="agenda-grid" id="agenda-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PACIENTES -->
+  <div class="page" id="page-pacientes">
+    <div class="page-header">
+      <div><h2>Pacientes</h2><p>Fichas y historial de sesiones</p></div>
+      <button class="btn btn-primary" onclick="openModal('modal-paciente')">+ Nuevo paciente</button>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="search-wrap" style="flex:1;min-width:200px">
+          <span class="search-icon">??</span>
+          <input class="form-control" placeholder="Buscar por nombre o lesión..." oninput="filtrarPacientes(this.value)">
+        </div>
+        <select class="form-control" style="width:160px" onchange="filtrarPorServicio(this.value)">
+          <option value="">Todos los servicios</option>
+          <option>Rehabilitación</option>
+          <option>Readaptación</option>
+          <option>Pilates</option>
+          <option>Recovery</option>
+          <option>Entrenamiento funcional</option>
+        </select>
+      </div>
+    </div>
+    <div class="card" id="pacientes-tabla-wrap" style="padding:0;overflow:hidden">
+      <div class="table-wrap" id="pacientes-tabla-desktop">
+        <table id="tabla-pacientes">
+          <thead><tr>
+            <th>Paciente</th><th>Teléfono</th><th>Servicio</th><th>Lesión/Diagnóstico</th><th>Profesional</th><th>Sesiones</th><th>Estado pago</th><th></th>
+          </tr></thead>
+          <tbody id="tbody-pacientes"></tbody>
+        </table>
+      </div>
+      <div id="pacientes-cards-mobile"></div>
+    </div>
+  </div>
+
+  <!-- ASISTENCIA -->
+  <div class="page" id="page-asistencia">
+    <div class="page-header">
+      <div><h2>Control de asistencia</h2><p>Registrá la asistencia diaria</p></div>
+      <input type="date" class="form-control" id="fecha-asist" style="width:180px" onchange="renderAsistencia()">
+    </div>
+    <div class="grid-3" style="margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--green)" id="asist-count">0</div>
+        <div class="stat-label">Asistieron</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--red)" id="aus-count">0</div>
+        <div class="stat-label">Ausentes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--orange)" id="rep-count">0</div>
+        <div class="stat-label">Reprogramados</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Turnos del día</div>
+      <div id="asist-list"></div>
+    </div>
+  </div>
+
+  <!-- PAGOS (gastos del centro) -->
+  <div class="page" id="page-pagos">
+    <div class="page-header">
+      <div><h2>Gastos del centro</h2><p>Tildá lo que pagaste este mes</p></div>
+      <button class="btn btn-primary" onclick="openModal('modal-gasto')">+ Agregar gasto</button>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-label">Total a pagar este mes</div>
+        <div class="caja-total" style="color:var(--red)" id="gasto-total-pendiente">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ya pagado</div>
+        <div class="caja-total" style="color:var(--green)" id="gasto-total-pagado">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total del mes</div>
+        <div class="caja-total" id="gasto-total-mes">$0</div>
       </div>
     </div>
 
-    <!-- COBROS -->
-    <div class="page" id="page-cobros">
-      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div><div class="page-title">Cobros</div><div class="page-sub">Ingresos esperados</div></div>
-        <button class="btn btn-accent" onclick="toggleForm('form-cobro')">+ Nuevo cobro</button>
-      </div>
-      <div class="card">
-        <div class="form-panel" id="form-cobro">
-          <div class="form-grid form-row2">
-            <div class="form-group"><label class="form-label">Cliente / concepto</label><input class="form-input" id="c-nombre" placeholder="Ej: MAREF"></div>
-            <div class="form-group"><label class="form-label">Monto $</label><input class="form-input" id="c-monto" type="number" placeholder="0"></div>
-          </div>
-          <div class="form-grid form-row2">
-            <div class="form-group"><label class="form-label">Fecha esperada</label><input class="form-input" id="c-fecha" type="date"></div>
-            <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="c-notas" placeholder="Opcional"></div>
-          </div>
-          <div class="form-actions"><button class="btn" onclick="toggleForm('form-cobro')">Cancelar</button><button class="btn btn-accent" onclick="addCobro()">Guardar cobro</button></div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div class="card-title" style="margin-bottom:0">Gastos del mes</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="filtro-act active" id="fg-todos" onclick="setFiltroGastos(this,'todos')">Todos</button>
+          <button class="filtro-act" onclick="setFiltroGastos(this,'pendiente')" style="--fc:var(--red)">? Sin pagar</button>
+          <button class="filtro-act" onclick="setFiltroGastos(this,'pagado')" style="--fc:var(--green)">? Pagados</button>
         </div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Cliente</th><th>Fecha</th><th>Monto</th><th>Estado</th><th></th></tr></thead>
-          <tbody id="cobros-tbody"></tbody>
-        </table></div>
+      </div>
+      <div id="gastos-checklist"></div>
+    </div>
+  </div>
+
+  <!-- COBRANZAS -->
+  <div class="page" id="page-cobranzas">
+    <div class="page-header">
+      <div><h2>Cobranzas</h2><p>Historial completo de movimientos</p></div>
+      <button class="btn btn-primary" onclick="openModal('modal-pago')">+ Registrar</button>
+    </div>
+    <div class="grid-3" style="margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-label">Cobrado hoy</div>
+        <div class="caja-total" id="caja-hoy">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Cobrado este mes</div>
+        <div class="caja-total" id="caja-mes">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total pendiente</div>
+        <div class="caja-total" style="color:var(--red)" id="caja-deuda">$0</div>
       </div>
     </div>
-
-    <!-- PAGOS -->
-    <div class="page" id="page-pagos">
-      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div><div class="page-title">Pagos</div><div class="page-sub">Obligaciones y vencimientos</div></div>
-        <button class="btn btn-accent" onclick="toggleForm('form-pago')">+ Nuevo pago</button>
-      </div>
-      <div class="card">
-        <div class="form-panel" id="form-pago">
-          <div class="form-grid form-row2">
-            <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="p-nombre" placeholder="Ej: AFIP"></div>
-            <div class="form-group"><label class="form-label">Monto $</label><input class="form-input" id="p-monto" type="number" placeholder="0"></div>
+    <div id="alertas-deuda" style="margin-bottom:12px"></div>
+    <div class="tabs" id="tabs-cobranzas">
+      <div class="tab active" onclick="switchTab('cobranzas','por-paciente')">Por paciente</div>
+      <div class="tab" onclick="switchTab('cobranzas','historial')">Historial</div>
+    </div>
+    <div class="tab-content active" id="tab-cobranzas-por-paciente">
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="cobranzas-tabla-desktop">
+          <div class="table-wrap">
+            <table><thead><tr><th>Paciente</th><th>Servicio</th><th>Cobertura</th><th>Sesiones</th><th>Deuda</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="tbody-cobranzas-pacientes"></tbody></table>
           </div>
-          <div class="form-grid form-row3">
-            <div class="form-group"><label class="form-label">Fecha lÃ­mite</label><input class="form-input" id="p-fecha" type="date"></div>
-            <div class="form-group"><label class="form-label">CategorÃ­a</label>
-              <select class="form-input" id="p-cat">
-                <option>Impuesto/AFIP</option><option>Alquiler</option><option>Tarjeta</option>
-                <option>PrÃ©stamo/cuota</option><option>Proveedor</option><option>Sueldo</option><option>Otro</option>
-              </select>
-            </div>
-            <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="p-notas" placeholder="Opcional"></div>
-          </div>
-          <div class="form-actions"><button class="btn" onclick="toggleForm('form-pago')">Cancelar</button><button class="btn btn-accent" onclick="addPago()">Guardar pago</button></div>
         </div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Concepto</th><th>CategorÃ­a</th><th>Vence</th><th>Monto</th><th>Estado</th><th></th></tr></thead>
-          <tbody id="pagos-tbody"></tbody>
-        </table></div>
+        <div id="cobranzas-cards-mobile"></div>
       </div>
     </div>
-
-    <!-- FLUJO -->
-    <div class="page" id="page-flujo">
-      <div class="page-header"><div class="page-title">Flujo de caja</div><div class="page-sub">ProyecciÃ³n completa</div></div>
-      <div class="metrics" id="flujo-metrics"></div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">LÃ­nea de tiempo</span></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Fecha</th><th>Concepto</th><th>Tipo</th><th>Movimiento</th><th style="text-align:right">Saldo acum.</th></tr></thead>
-          <tbody id="flujo-tbody"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- IA -->
-    <div class="page" id="page-ia">
-      <div class="page-header"><div class="page-title">Asistente IA</div><div class="page-sub">AnÃ¡lisis inteligente de tu situaciÃ³n financiera</div></div>
-      <div class="card">
-        <div class="ai-wrap">
-          <div class="ai-messages" id="ai-messages"></div>
-          <div class="ai-footer">
-            <div class="ai-input-row">
-              <input class="ai-input" id="ai-input" placeholder="Preguntame lo que quieras sobre tus finanzas..." onkeydown="if(event.key==='Enter')sendAI()">
-              <button class="btn btn-accent" onclick="sendAI()">Enviar</button>
-            </div>
-            <div class="ai-quickbtns">
-              <button class="ai-qbtn" onclick="askQuick('Â¿QuÃ© pago primero con lo que tengo disponible?')">Â¿QuÃ© pago primero?</button>
-              <button class="ai-qbtn" onclick="askQuick('Â¿En algÃºn momento quedo con saldo negativo? Â¿CuÃ¡ndo?')">Â¿Quedo en rojo?</button>
-              <button class="ai-qbtn" onclick="askQuick('Resumime el panorama general de mi flujo de caja')">Resumen general</button>
-              <button class="ai-qbtn" onclick="askQuick('Â¿QuÃ© cobro es mÃ¡s crÃ­tico para cubrir mis compromisos?')">Â¿Cobro mÃ¡s crÃ­tico?</button>
-              <button class="ai-qbtn" onclick="askQuick('Dame una estrategia concreta para los prÃ³ximos 7 dÃ­as')">Plan 7 dÃ­as</button>
-            </div>
+    <div class="tab-content" id="tab-cobranzas-historial">
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="cobranzas-hist-desktop">
+          <div class="table-wrap">
+            <table><thead><tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Monto</th><th>Estado</th></tr></thead>
+            <tbody id="tbody-cobranzas-hist"></tbody></table>
           </div>
+        </div>
+        <div id="cobranzas-hist-mobile"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECORDATORIOS -->
+  <div class="page" id="page-recordatorios">
+    <div class="page-header">
+      <div><h2>Recordatorios automáticos</h2><p>Reducí el ausentismo hasta un 40%</p></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;background:var(--primary-light);border-color:var(--primary-soft)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:28px">??</span>
+        <div>
+          <div style="font-weight:600;font-size:15px;color:var(--primary)">Impacto real de los recordatorios</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:2px">Los recordatorios automáticos reducen el ausentismo entre 30% y 40%. Esta semana ya se enviaron <strong id="rec-enviados">12</strong> recordatorios.</div>
         </div>
       </div>
     </div>
-
-    <!-- CONFIG -->
-    <div class="page" id="page-config">
-      <div class="page-header"><div class="page-title">ConfiguraciÃ³n</div><div class="page-sub">Saldo y datos</div></div>
+    <div class="grid-2" style="margin-bottom:16px">
       <div class="card">
-        <div class="card-header"><span class="card-title">Saldo disponible actual</span></div>
-        <div class="card-body">
-          <p style="color:var(--text3);font-size:13px;margin-bottom:12px">AjustÃ¡ el saldo disponible. Esto afecta todas las proyecciones.</p>
-          <div class="disp-row">
-            <input class="disp-input" id="conf-saldo" type="number" placeholder="0">
-            <button class="btn btn-accent" onclick="saveSaldo()">Actualizar</button>
-          </div>
+        <div class="card-title">Configuración</div>
+        <div class="form-group">
+          <label>Recordatorio principal</label>
+          <select class="form-control" id="rec-tiempo1">
+            <option value="24">24 horas antes (recomendado)</option>
+            <option value="48">48 horas antes</option>
+            <option value="12">12 horas antes</option>
+          </select>
         </div>
+        <div class="form-group">
+          <label>Recordatorio secundario (opcional)</label>
+          <select class="form-control" id="rec-tiempo2">
+            <option value="0">No enviar</option>
+            <option value="2">2 horas antes</option>
+            <option value="3">3 horas antes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Canal</label>
+          <select class="form-control">
+            <option>WhatsApp</option>
+            <option>SMS</option>
+            <option>WhatsApp + SMS</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Mensaje personalizado</label>
+          <textarea class="form-control" rows="3" id="rec-mensaje">Hola {nombre} ?? Te recordamos tu turno en el centro para mañana {fecha} a las {hora} con {profesional}. ¡Nos vemos!</textarea>
+        </div>
+        <button class="btn btn-primary" onclick="guardarRecConfig()">Guardar configuración</button>
       </div>
       <div class="card">
-        <div class="card-header"><span class="card-title">Datos</span></div>
-        <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn" onclick="exportJSON()">â†“ Exportar JSON</button>
-          <button class="btn btn-danger" onclick="resetData()">âš  Borrar todo</button>
-        </div>
+        <div class="card-title">Próximos recordatorios a enviar</div>
+        <div id="proximos-rec"></div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-title">Historial de envíos</div>
+      <div id="hist-rec"></div>
+    </div>
+  </div>
 
-  </main>
+  <!-- SERVICIOS -->
+  <div class="page" id="page-servicios">
+    <div class="page-header">
+      <div><h2>Organización por servicios</h2><p>Centro deportivo integral</p></div>
+      <button class="btn btn-primary" onclick="openModal('modal-servicio')">+ Servicio</button>
+    </div>
+    <div class="grid-3" id="servicios-grid" style="margin-bottom:24px"></div>
+
+    <div class="grid-2" style="gap:20px">
+      <!-- TARIFAS -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:0">?? Tarifas</div>
+          <button class="btn btn-sm btn-secondary" onclick="openModal('modal-tarifa')">+ Tarifa</button>
+        </div>
+        <div id="tarifas-list"></div>
+      </div>
+
+      <!-- OBRAS SOCIALES -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:0">?? Obras sociales</div>
+          <button class="btn btn-sm btn-secondary" onclick="openModal('modal-obrasocial')">+ Agregar</button>
+        </div>
+        <div id="obras-sociales-list"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
 </div>
 
-<script>
-const TODAY = '2026-04-08';
-const fmt = v => '$\u00a0' + Math.round(v).toLocaleString('es-AR');
-const fmtDate = d => { if(!d) return ''; const p = d.split('-'); return p[2]+'/'+p[1]+'/'+p[0].slice(2); };
-const diffDays = d => Math.ceil((new Date(d) - new Date(TODAY)) / 86400000);
-
-// DATA
-function defaultData() {
-  return {
-    disponible: 3800000,
-    cobros: [
-      {id:1,nombre:'25 de Mayo 16-2',monto:350000,fecha:'2026-03-29',cobrado:false,notas:''},
-      {id:2,nombre:'SAMA',monto:437360,fecha:'2026-03-31',cobrado:false,notas:''},
-      {id:3,nombre:'Chia Orrego',monto:420000,fecha:'2026-04-05',cobrado:false,notas:''},
-      {id:4,nombre:'MAREF',monto:1210000,fecha:'2026-04-09',cobrado:false,notas:''},
-      {id:5,nombre:'MYA',monto:2757815,fecha:'2026-04-10',cobrado:false,notas:''},
-      {id:6,nombre:'San MÃ¡ximo',monto:3666542,fecha:'2026-04-11',cobrado:false,notas:''},
-      {id:7,nombre:'Chia Orrego',monto:250000,fecha:'2026-04-13',cobrado:false,notas:''},
-      {id:8,nombre:'San MÃ¡ximo',monto:3683710,fecha:'2026-04-13',cobrado:false,notas:''}
-    ],
-    pagos: [
-      {id:1,nombre:'Anticipo ganancias',monto:1120000,fecha:'2026-04-10',pagado:false,cat:'Impuesto/AFIP',notas:'Lo antes posible'},
-      {id:2,nombre:'Alq Vivian',monto:900000,fecha:'2026-04-10',pagado:false,cat:'Alquiler',notas:'Plazo mÃ¡x 10'},
-      {id:3,nombre:'Tarjeta',monto:2500000,fecha:'2026-04-10',pagado:false,cat:'Tarjeta',notas:'Plazo mÃ¡x 10'},
-      {id:4,nombre:'MentorÃ­a',monto:1704000,fecha:'2026-04-10',pagado:false,cat:'Otro',notas:'Plazo mÃ¡x 10'},
-      {id:5,nombre:'Planes AFIP',monto:936832,fecha:'2026-04-09',pagado:false,cat:'Impuesto/AFIP',notas:''},
-      {id:6,nombre:'Cheques San Juan y Solis',monto:600000,fecha:'2026-04-10',pagado:false,cat:'Proveedor',notas:'359390+359407'},
-      {id:7,nombre:'Alquiler Ramiro',monto:990000,fecha:'2026-04-15',pagado:false,cat:'Alquiler',notas:'Plazo mÃ¡x 15'}
-    ]
-  };
-}
-
-let data = (() => { try { const d = localStorage.getItem('flujo_v1'); return d ? JSON.parse(d) : defaultData(); } catch(e) { return defaultData(); } })();
-function save() { localStorage.setItem('flujo_v1', JSON.stringify(data)); updateTopbar(); }
-
-function updateTopbar() {
-  document.getElementById('top-saldo').textContent = fmt(data.disponible);
-}
-
-// NAVIGATION
-let chartFlujo = null, chartCats = null;
-function navigate(page, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  el.classList.add('active');
-  if(page === 'dashboard') renderDashboard();
-  if(page === 'cobros') renderCobros();
-  if(page === 'pagos') renderPagos();
-  if(page === 'flujo') renderFlujo();
-  if(page === 'ia') initIA();
-  if(page === 'config') { document.getElementById('conf-saldo').value = data.disponible; }
-}
-
-function toggleForm(id) {
-  const el = document.getElementById(id);
-  el.classList.toggle('open');
-}
-
-// FLUJO CALCULATION
-function calcFlujo() {
-  const events = [{fecha: TODAY, concepto: 'Saldo inicial', tipo: 'inicio', monto: data.disponible}];
-  data.cobros.filter(c => !c.cobrado).forEach(c => events.push({fecha:c.fecha, concepto:c.nombre, tipo:'cobro', monto:c.monto}));
-  data.pagos.filter(p => !p.pagado).forEach(p => events.push({fecha:p.fecha, concepto:p.nombre, tipo:'pago', monto:-p.monto}));
-  events.sort((a,b) => a.fecha.localeCompare(b.fecha));
-  let saldo = 0;
-  return events.map(e => { saldo += e.monto; return {...e, saldo}; });
-}
-
-// DASHBOARD
-function renderDashboard() {
-  const now = new Date();
-  document.getElementById('dash-date').textContent = now.toLocaleDateString('es-AR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
-
-  const flujo = calcFlujo();
-  const totalCobros = data.cobros.filter(c=>!c.cobrado).reduce((a,c)=>a+c.monto,0);
-  const totalPagos = data.pagos.filter(p=>!p.pagado).reduce((a,p)=>a+p.monto,0);
-  const saldoFinal = flujo.length ? flujo[flujo.length-1].saldo : data.disponible;
-  const minSaldo = Math.min(...flujo.map(f=>f.saldo));
-
-  document.getElementById('dash-metrics').innerHTML = `
-    <div class="metric-card green">
-      <div class="metric-label">Disponible hoy</div>
-      <div class="metric-value green">${fmt(data.disponible)}</div>
-      <div class="metric-sub">en banco + efectivo</div>
+<!-- BOTTOM NAV (mobile only) -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <div class="bnav-item active" id="bnav-dashboard" onclick="navigate('dashboard')">
+      <span class="bicon">??</span>Inicio
     </div>
-    <div class="metric-card blue">
-      <div class="metric-label">Cobros pendientes</div>
-      <div class="metric-value blue">${fmt(totalCobros)}</div>
-      <div class="metric-sub">${data.cobros.filter(c=>!c.cobrado).length} cobros</div>
+    <div class="bnav-item" id="bnav-agenda" onclick="navigate('agenda')">
+      <span class="bicon">??</span>Agenda
     </div>
-    <div class="metric-card red">
-      <div class="metric-label">Pagos pendientes</div>
-      <div class="metric-value red">${fmt(totalPagos)}</div>
-      <div class="metric-sub">${data.pagos.filter(p=>!p.pagado).length} obligaciones</div>
+    <div class="bnav-item" id="bnav-pacientes" onclick="navigate('pacientes')">
+      <span class="bicon">??</span>Pacientes
     </div>
-    <div class="metric-card ${saldoFinal>=0?'green':'red'}">
-      <div class="metric-label">Saldo proyectado</div>
-      <div class="metric-value ${saldoFinal>=0?'green':'red'}">${fmt(saldoFinal)}</div>
-      <div class="metric-sub">mÃ­nimo ${fmt(minSaldo)}</div>
+    <div class="bnav-item" id="bnav-asistencia" onclick="navigate('asistencia')">
+      <span class="bicon">?</span>Asist.
     </div>
-  `;
+    <div class="bnav-item" id="bnav-pagos" onclick="navigate('pagos')">
+      <span class="bicon">??</span>Gastos
+    </div>
+    <div class="bnav-item" id="bnav-mas" onclick="toggleMasMenu()">
+      <span class="bicon">?</span>Más
+    </div>
+  </div>
+</nav>
 
-  // ALERTS
-  let alerts = '';
-  const vencidos = data.pagos.filter(p=>!p.pagado && p.fecha <= TODAY);
-  if(vencidos.length) alerts += `<div class="alert danger"><span class="alert-icon">âš </span> ${vencidos.length} pago(s) vencido(s): ${vencidos.map(v=>v.nombre).join(', ')} â€” total ${fmt(vencidos.reduce((a,p)=>a+p.monto,0))}</div>`;
-  if(minSaldo < 0) alerts += `<div class="alert danger"><span class="alert-icon">âš </span> Saldo negativo proyectado. MÃ­nimo: ${fmt(minSaldo)}. RevisÃ¡ el flujo antes de comprometerte.</div>`;
-  const proximos7 = data.pagos.filter(p=>!p.pagado && p.fecha > TODAY && diffDays(p.fecha) <= 7);
-  if(proximos7.length) alerts += `<div class="alert warning"><span class="alert-icon">â—Ž</span> ${proximos7.length} pago(s) en los prÃ³ximos 7 dÃ­as por ${fmt(proximos7.reduce((a,p)=>a+p.monto,0))}</div>`;
-  if(!alerts) alerts = `<div class="alert success"><span class="alert-icon">âœ“</span> Sin alertas crÃ­ticas. Flujo bajo control.</div>`;
-  document.getElementById('dash-alerts').innerHTML = alerts;
+<!-- MAS MENU (mobile) -->
+<div id="mas-menu" style="display:none;position:fixed;bottom:70px;right:12px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:300;overflow:hidden;min-width:180px">
+  <div onclick="navigate('cobranzas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">?? Cobranzas</div>
+  <div onclick="navigate('recordatorios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">?? Recordatorios</div>
+  <div onclick="navigate('servicios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500">?? Servicios</div>
+</div>
 
-  // CHART FLUJO
-  if(chartFlujo) { chartFlujo.destroy(); chartFlujo = null; }
-  const labels = flujo.map(f => fmtDate(f.fecha));
-  const saldos = flujo.map(f => f.saldo);
-  chartFlujo = new Chart(document.getElementById('chart-flujo'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Saldo',
-        data: saldos,
-        backgroundColor: saldos.map(s => s >= 0 ? 'rgba(26,107,58,0.75)' : 'rgba(192,57,43,0.75)'),
-        borderRadius: 4,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmt(ctx.raw) }, backgroundColor: '#ffffff', titleColor: '#5a5650', bodyColor: '#1a1814', borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1 } },
-      scales: {
-        x: { ticks: { color: '#9a9690', font: { size: 10, family: 'DM Mono' }, autoSkip: false, maxRotation: 45 }, grid: { color: 'rgba(0,0,0,0.04)' }, border: { color: 'rgba(0,0,0,0.07)' } },
-        y: { ticks: { color: '#9a9690', font: { size: 10, family: 'DM Mono' }, callback: v => '$' + (v/1000000).toFixed(1) + 'M' }, grid: { color: 'rgba(0,0,0,0.04)' }, border: { color: 'rgba(0,0,0,0.07)' } }
-      }
-    }
-  });
+<!-- MODALES -->
+<div class="modal-overlay" id="modal-turno">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo turno</h3>
+      <button class="modal-close" onclick="closeModal('modal-turno')">?</button>
+    </div>
+    <div class="form-group">
+      <label>Paciente</label>
+      <select class="form-control" id="turno-paciente">
+        <option>— Seleccionar —</option>
+      </select>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" class="form-control" id="turno-fecha">
+      </div>
+      <div class="form-group">
+        <label>Hora</label>
+        <select class="form-control" id="turno-hora"></select>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Duración</label>
+        <select class="form-control" id="turno-duracion">
+          <option value="30">30 min</option>
+          <option value="45" selected>45 min</option>
+          <option value="60">60 min</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Servicio</label>
+        <select class="form-control" id="turno-servicio">
+          <option>Rehabilitación</option>
+          <option>Readaptación</option>
+          <option>Pilates</option>
+          <option>Recovery</option>
+          <option>Entrenamiento funcional</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Profesional</label>
+      <select class="form-control" id="turno-prof">
+        <option>Lic. García</option>
+        <option>Lic. Romero</option>
+        <option>Lic. Paz</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notas</label>
+      <input class="form-control" id="turno-notas" placeholder="Observaciones opcionales">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-turno')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTurno()">Guardar turno</button>
+    </div>
+  </div>
+</div>
 
-  // CHART CATS
-  if(chartCats) { chartCats.destroy(); chartCats = null; }
-  const catMap = {};
-  data.pagos.filter(p=>!p.pagado).forEach(p => { catMap[p.cat] = (catMap[p.cat]||0) + p.monto; });
-  const catLabels = Object.keys(catMap);
-  const catColors = ['rgba(26,107,58,0.8)','rgba(26,95,168,0.8)','rgba(192,57,43,0.8)','rgba(183,96,10,0.8)','rgba(120,70,180,0.8)','rgba(20,140,100,0.8)','rgba(160,80,40,0.8)'];
-  chartCats = new Chart(document.getElementById('chart-cats'), {
-    type: 'doughnut',
-    data: {
-      labels: catLabels,
-      datasets: [{ data: catLabels.map(k=>catMap[k]), backgroundColor: catColors.slice(0,catLabels.length), borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: true, position: 'right', labels: { color: '#5a5650', font: { size: 11, family: 'DM Sans' }, boxWidth: 10, padding: 10 } },
-        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmt(ctx.raw) }, backgroundColor: '#ffffff', titleColor: '#5a5650', bodyColor: '#1a1814', borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1 }
-      },
-      cutout: '65%'
-    }
-  });
-
-  // UPCOMING
-  const ups = data.pagos.filter(p=>!p.pagado).sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(0,6);
-  document.getElementById('dash-upcoming').innerHTML = ups.length ? ups.map(p => {
-    const d = diffDays(p.fecha);
-    const badge = d < 0 ? `<span class="badge badge-red">Vencido</span>` : d === 0 ? `<span class="badge badge-red">Hoy</span>` : d <= 3 ? `<span class="badge badge-amber">${d}d</span>` : `<span class="badge badge-gray">${d}d</span>`;
-    return `<tr><td>${p.nombre}<br><span style="color:var(--text3);font-size:11px">${p.cat}</span></td><td>${fmtDate(p.fecha)}</td><td class="mono">${fmt(p.monto)}</td><td>${badge}</td></tr>`;
-  }).join('') : `<tr><td colspan="4" class="empty"><div class="empty-icon">âœ“</div>Sin pagos pendientes</td></tr>`;
-
-  updateNavBadge();
-}
-
-function updateNavBadge() {
-  const urgentes = data.pagos.filter(p=>!p.pagado && diffDays(p.fecha) <= 3).length;
-  const nav = document.getElementById('nav-pagos');
-  const existing = nav.querySelector('.nav-badge');
-  if(existing) existing.remove();
-  if(urgentes > 0) nav.innerHTML += `<span class="nav-badge">${urgentes}</span>`;
-}
-
-// COBROS
-function renderCobros() {
-  const sorted = [...data.cobros].sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  document.getElementById('cobros-tbody').innerHTML = sorted.length ? sorted.map(c => `
-    <tr class="${c.cobrado?'paid':''}">
-      <td>${c.nombre}${c.notas?`<br><span style="color:var(--text3);font-size:11px">${c.notas}</span>`:''}
-      </td>
-      <td>${fmtDate(c.fecha)}</td>
-      <td class="mono">${fmt(c.monto)}</td>
-      <td>${c.cobrado ? '<span class="badge badge-green">Cobrado</span>' : '<span class="badge badge-blue">Pendiente</span>'}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm ${c.cobrado?'':'btn-success'}" onclick="toggleCobro(${c.id})">${c.cobrado?'Deshacer':'âœ“ Cobrado'}</button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="delCobro(${c.id})">âœ•</button>
+<div class="modal-overlay" id="modal-paciente">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo paciente</h3>
+      <button class="modal-close" onclick="closeModal('modal-paciente')">?</button>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input class="form-control" id="pac-nombre" placeholder="Juan Pérez">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input class="form-control" id="pac-tel" placeholder="261 123 4567" type="tel">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Email</label>
+        <input class="form-control" id="pac-email" placeholder="paciente@mail.com" type="email">
+      </div>
+      <div class="form-group">
+        <label>Edad</label>
+        <input class="form-control" id="pac-edad" placeholder="Ej: 34" type="number" min="0">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Deporte / Actividad</label>
+        <input class="form-control" id="pac-deporte" placeholder="Fútbol, running...">
+      </div>
+      <div class="form-group">
+        <label>Servicio</label>
+        <select class="form-control" id="pac-servicio">
+          <option>Rehabilitación</option>
+          <option>Readaptación</option>
+          <option>Pilates</option>
+          <option>Recovery</option>
+          <option>Entrenamiento funcional</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Motivo de consulta</label>
+      <input class="form-control" id="pac-motivo" placeholder="¿Por qué consulta?">
+    </div>
+    <div class="form-group">
+      <label>Lesión / Diagnóstico</label>
+      <input class="form-control" id="pac-lesion" placeholder="Esguince, lumbalgia...">
+    </div>
+    <div class="form-group">
+      <label>Antecedentes relevantes</label>
+      <textarea class="form-control" id="pac-antecedentes" rows="3" placeholder="Cirugías, recaídas, antecedentes clínicos..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Evaluación inicial</label>
+      <textarea class="form-control" id="pac-evaluacion" rows="3" placeholder="Dolor, movilidad, fuerza, pruebas funcionales..."></textarea>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Objetivo principal</label>
+        <input class="form-control" id="pac-objetivo" placeholder="Volver a correr sin dolor">
+      </div>
+      <div class="form-group">
+        <label>Etapa actual</label>
+        <select class="form-control" id="pac-etapa">
+          <option>Evaluación inicial</option>
+          <option>Control del dolor</option>
+          <option>Movilidad y activación</option>
+          <option>Fortalecimiento</option>
+          <option>Readaptación funcional</option>
+          <option>Retorno al deporte</option>
+          <option>Alta</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Plan de rehabilitación</label>
+      <textarea class="form-control" id="pac-plan" rows="3" placeholder="Frecuencia, ejercicios, objetivos de corto plazo..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Progresión prevista / actual</label>
+      <textarea class="form-control" id="pac-progresion" rows="3" placeholder="Criterios de avance, respuesta al tratamiento, hitos alcanzados..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Observaciones</label>
+      <textarea class="form-control" id="pac-observaciones" rows="3" placeholder="Indicaciones para el paciente, alertas, seguimiento..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Profesional asignado</label>
+      <select class="form-control" id="pac-prof">
+        <option>Lic. García</option>
+        <option>Lic. Romero</option>
+        <option>Lic. Paz</option>
+      </select>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+      <div class="form-group">
+        <label>Tipo de cobertura</label>
+        <select class="form-control" id="pac-cobertura" onchange="onCoberturaChange()">
+          <option value="particular">Particular</option>
+          <option value="obra_social">Obra social</option>
+        </select>
+      </div>
+      <div id="pac-os-section" style="display:none">
+        <div class="form-group">
+          <label>Obra social</label>
+          <select class="form-control" id="pac-os-select" onchange="onObrasSocialChange()">
+            <option value="">— Seleccionar —</option>
+          </select>
         </div>
-      </td>
-    </tr>`).join('') : `<tr><td colspan="5" class="empty"><div class="empty-icon">â†“</div>No hay cobros cargados</td></tr>`;
-}
-
-function addCobro() {
-  const n = document.getElementById('c-nombre').value.trim();
-  const m = parseFloat(document.getElementById('c-monto').value);
-  const f = document.getElementById('c-fecha').value;
-  if(!n||!m||!f) return alert('CompletÃ¡ nombre, monto y fecha');
-  data.cobros.push({id:Date.now(), nombre:n, monto:m, fecha:f, cobrado:false, notas:document.getElementById('c-notas').value});
-  save(); renderCobros(); toggleForm('form-cobro');
-  ['c-nombre','c-monto','c-fecha','c-notas'].forEach(id => document.getElementById(id).value='');
-}
-
-function toggleCobro(id) {
-  const c = data.cobros.find(x=>x.id===id);
-  if(!c) return;
-  c.cobrado = !c.cobrado;
-  data.disponible += c.cobrado ? c.monto : -c.monto;
-  save(); renderCobros();
-}
-
-function delCobro(id) {
-  if(!confirm('Â¿Eliminar este cobro?')) return;
-  data.cobros = data.cobros.filter(x=>x.id!==id);
-  save(); renderCobros();
-}
-
-// PAGOS
-function renderPagos() {
-  const sorted = [...data.pagos].sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  document.getElementById('pagos-tbody').innerHTML = sorted.length ? sorted.map(p => {
-    const d = diffDays(p.fecha);
-    const badge = p.pagado ? '<span class="badge badge-green">Pagado</span>' : d < 0 ? '<span class="badge badge-red">Vencido</span>' : d <= 3 ? `<span class="badge badge-amber">${d}d</span>` : `<span class="badge badge-gray">${d}d</span>`;
-    return `<tr class="${p.pagado?'paid':''}">
-      <td>${p.nombre}${p.notas?`<br><span style="color:var(--text3);font-size:11px">${p.notas}</span>`:''}
-      </td>
-      <td><span class="badge badge-gray" style="font-size:10px">${p.cat}</span></td>
-      <td>${fmtDate(p.fecha)}</td>
-      <td class="mono">${fmt(p.monto)}</td>
-      <td>${badge}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm ${p.pagado?'':'btn-success'}" onclick="togglePago(${p.id})">${p.pagado?'Deshacer':'âœ“ Pagado'}</button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="delPago(${p.id})">âœ•</button>
+        <div id="pac-os-info" style="display:none;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px;font-size:13px;margin-bottom:12px">
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div><span style="color:var(--text-muted)">Reconoce por sesión:</span> <strong id="pac-os-monto" style="color:var(--green)"></strong></div>
+            <div><span style="color:var(--text-muted)">Adicional x10 sesiones:</span> <strong id="pac-os-adicional" style="color:var(--primary)"></strong></div>
+            <div><span style="color:var(--text-muted)">Cobertura:</span> <strong id="pac-os-cobertura"></strong></div>
+          </div>
         </div>
-      </td>
-    </tr>`;
-  }).join('') : `<tr><td colspan="6" class="empty"><div class="empty-icon">â†‘</div>No hay pagos cargados</td></tr>`;
-}
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Sesiones autorizadas</label>
+          <input type="number" class="form-control" id="pac-sesiones-auth" placeholder="Ej: 10" min="0">
+        </div>
+        <div class="form-group">
+          <label>Sesiones realizadas</label>
+          <input type="number" class="form-control" id="pac-sesiones-real" placeholder="0" min="0" value="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Pedido médico <span style="color:var(--text-muted);font-weight:400">(foto, opcional)</span></label>
+        <div id="pac-foto-drop" onclick="document.getElementById('pac-foto-input').click()"
+          style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg)">
+          <div style="font-size:28px">??</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">Tocá para subir o sacar foto</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">JPG, PNG, PDF</div>
+        </div>
+        <input type="file" id="pac-foto-input" accept="image/*,application/pdf" style="display:none" onchange="previewFotoMedico(this)">
+        <div id="pac-foto-preview" style="display:none;margin-top:10px;text-align:center">
+          <img id="pac-foto-img" style="max-width:100%;max-height:160px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="pac-foto-nombre"></div>
+          <button onclick="limpiarFotoMedico()" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;margin-top:2px">? Quitar</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-paciente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPaciente()">Guardar paciente</button>
+    </div>
+  </div>
+</div>
 
-function addPago() {
-  const n = document.getElementById('p-nombre').value.trim();
-  const m = parseFloat(document.getElementById('p-monto').value);
-  const f = document.getElementById('p-fecha').value;
-  if(!n||!m||!f) return alert('CompletÃ¡ nombre, monto y fecha');
-  data.pagos.push({id:Date.now(), nombre:n, monto:m, fecha:f, pagado:false, cat:document.getElementById('p-cat').value, notas:document.getElementById('p-notas').value});
-  save(); renderPagos(); toggleForm('form-pago');
-  ['p-nombre','p-monto','p-fecha','p-notas'].forEach(id => document.getElementById(id).value='');
-}
+<div class="modal-overlay" id="modal-pago">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Registrar pago</h3>
+      <button class="modal-close" onclick="closeModal('modal-pago')">?</button>
+    </div>
+    <div class="form-group">
+      <label>Paciente</label>
+      <select class="form-control" id="pago-paciente"></select>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Tipo</label>
+        <select class="form-control" id="pago-tipo">
+          <option>Por sesión</option>
+          <option>Pack 5 sesiones</option>
+          <option>Pack 10 sesiones</option>
+          <option>Pack mensual</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Monto ($)</label>
+        <input type="number" class="form-control" id="pago-monto" placeholder="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Estado</label>
+      <select class="form-control" id="pago-estado">
+        <option>Pagado</option>
+        <option>Pendiente</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-pago')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPago()">Registrar</button>
+    </div>
+  </div>
+</div>
 
-function togglePago(id) {
-  const p = data.pagos.find(x=>x.id===id);
-  if(!p) return;
-  p.pagado = !p.pagado;
-  data.disponible += p.pagado ? -p.monto : p.monto;
-  save(); renderPagos();
-}
+<div class="modal-overlay" id="modal-servicio">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo servicio</h3>
+      <button class="modal-close" onclick="closeModal('modal-servicio')">?</button>
+    </div>
+    <div class="form-group"><label>Nombre del servicio</label><input class="form-control" id="serv-nombre"></div>
+    <div class="form-group"><label>Descripción</label><input class="form-control" id="serv-desc"></div>
+    <div class="form-group"><label>Ícono (emoji)</label><input class="form-control" id="serv-icono" placeholder="??" maxlength="2"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-servicio')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarServicio()">Guardar</button>
+    </div>
+  </div>
+</div>
 
-function delPago(id) {
-  if(!confirm('Â¿Eliminar este pago?')) return;
-  data.pagos = data.pagos.filter(x=>x.id!==id);
-  save(); renderPagos();
-}
+<div class="modal-overlay" id="modal-tarifa">
+  <div class="modal" style="width:400px">
+    <div class="modal-header">
+      <h3>Nueva tarifa</h3>
+      <button class="modal-close" onclick="closeModal('modal-tarifa')">?</button>
+    </div>
+    <div class="form-group">
+      <label>Servicio</label>
+      <select class="form-control" id="tarifa-serv">
+        <option>Rehabilitación</option><option>Readaptación</option>
+        <option>Pilates</option><option>Recovery</option><option>Entrenamiento funcional</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Concepto</label>
+      <input class="form-control" id="tarifa-concepto" placeholder="Ej: Sesión individual">
+    </div>
+    <div class="form-group">
+      <label>Monto ($)</label>
+      <input type="number" class="form-control" id="tarifa-monto" placeholder="0">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-tarifa')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTarifa()">Guardar</button>
+    </div>
+  </div>
+</div>
 
-// FLUJO
-function renderFlujo() {
-  const flujo = calcFlujo();
-  const totalIn = data.disponible + data.cobros.filter(c=>!c.cobrado).reduce((a,c)=>a+c.monto,0);
-  const totalOut = data.pagos.filter(p=>!p.pagado).reduce((a,p)=>a+p.monto,0);
-  const saldoFinal = flujo.length ? flujo[flujo.length-1].saldo : data.disponible;
+<div class="modal-overlay" id="modal-obrasocial">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <h3>Nueva obra social</h3>
+      <button class="modal-close" onclick="closeModal('modal-obrasocial')">?</button>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input class="form-control" id="os-nombre" placeholder="OSDE">
+      </div>
+      <div class="form-group">
+        <label>Cobertura %</label>
+        <input class="form-control" id="os-cobertura" placeholder="70%">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Reconoce por sesión ($)</label>
+        <input type="number" class="form-control" id="os-monto-sesion" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Adicional cobrar x10 sesiones ($)</label>
+        <input type="number" class="form-control" id="os-adicional10" placeholder="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Servicios cubiertos</label>
+      <input class="form-control" id="os-servicios" placeholder="Rehabilitación, Pilates">
+    </div>
+    <div class="form-group">
+      <label>Teléfono / contacto</label>
+      <input class="form-control" id="os-contacto" placeholder="0800-...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-obrasocial')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarObraSocial()">Guardar</button>
+    </div>
+  </div>
+</div>
 
-  document.getElementById('flujo-metrics').innerHTML = `
-    <div class="metric-card green"><div class="metric-label">Total ingresos</div><div class="metric-value green">${fmt(totalIn)}</div></div>
-    <div class="metric-card red"><div class="metric-label">Total egresos</div><div class="metric-value red">${fmt(totalOut)}</div></div>
-    <div class="metric-card ${saldoFinal>=0?'green':'red'}"><div class="metric-label">Resultado neto</div><div class="metric-value ${saldoFinal>=0?'green':'red'}">${fmt(saldoFinal)}</div></div>
-  `;
+<div class="modal-overlay" id="modal-borrar-pac">
+  <div class="modal" style="width:380px;text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">???</div>
+    <h3 style="font-size:18px;margin-bottom:8px">¿Borrar paciente?</h3>
+    <p style="font-weight:600;font-size:15px;margin-bottom:4px" id="borrar-pac-nombre"></p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:6px" id="borrar-pac-detalle"></p>
+    <p style="font-size:13px;color:var(--red);margin-bottom:20px">También se van a eliminar todos sus turnos de la agenda.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="document.getElementById('modal-borrar-pac').classList.remove('open')" style="flex:1">Cancelar</button>
+      <button class="btn" id="btn-confirmar-borrar" style="flex:1;background:var(--red);color:white">Sí, borrar</button>
+    </div>
+  </div>
+</div>
 
-  document.getElementById('flujo-tbody').innerHTML = flujo.map(f => `
-    <tr>
-      <td style="font-family:var(--font-mono);font-size:12px;color:var(--text3)">${fmtDate(f.fecha)}</td>
-      <td>${f.concepto}</td>
-      <td>${f.tipo==='cobro'?'<span class="badge badge-green">Cobro</span>':f.tipo==='pago'?'<span class="badge badge-red">Pago</span>':'<span class="badge badge-blue">Inicial</span>'}</td>
-      <td class="${f.monto>=0?'flujo-pos':'flujo-neg'}">${f.monto>0?'+':''}${fmt(f.monto)}</td>
-      <td class="${f.saldo>=0?'flujo-saldo-pos':'flujo-saldo-neg'}">${fmt(f.saldo)}</td>
-    </tr>`).join('');
-}
+<div class="modal-overlay" id="modal-bloqueado">
+  <div class="modal" style="width:380px;text-align:center">
+    <div style="font-size:56px;margin-bottom:12px">??</div>
+    <h3 style="font-size:18px;margin-bottom:8px">Sesiones agotadas</h3>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:6px">
+      <strong id="bloqueado-nombre"></strong> ya utilizó todas sus sesiones autorizadas.
+    </p>
+    <p style="font-size:13px;color:var(--red);font-weight:600;margin-bottom:4px">
+      <span id="bloqueado-auth"></span> sesiones autorizadas — todas utilizadas
+    </p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px" id="bloqueado-detalle"></p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+      Para seguir agendando necesitás actualizar el pedido médico y la cantidad de sesiones autorizadas en la ficha del paciente.
+    </p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="document.getElementById('modal-bloqueado').classList.remove('open')" style="flex:1">Cancelar</button>
+      <button class="btn btn-primary" onclick="document.getElementById('modal-bloqueado').classList.remove('open');navigate('pacientes')" style="flex:1">Ir a ficha</button>
+    </div>
+  </div>
+</div>
 
-// IA
-let aiHistory = [];
-let iaInited = false;
+<div class="modal-overlay" id="modal-completado">
+  <div class="modal" style="width:400px;text-align:center">
+    <div style="font-size:64px;margin-bottom:12px">??</div>
+    <h3 style="font-size:20px;margin-bottom:8px">¡Ciclo completo!</h3>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:4px">
+      <strong id="completado-nombre"></strong> asistió a todas sus sesiones autorizadas.
+    </p>
+    <p style="color:var(--primary);font-weight:600;font-size:15px;margin-bottom:20px">
+      <span id="completado-sesiones"></span> sesiones completadas ?
+    </p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+      Acordate de solicitar un nuevo pedido médico si el tratamiento continúa.
+    </p>
+    <button class="btn btn-primary" onclick="document.getElementById('modal-completado').classList.remove('open')" style="width:100%">Entendido</button>
+  </div>
+</div>
 
-function initIA() {
-  if(iaInited) return;
-  iaInited = true;
-  const flujo = calcFlujo();
-  const minSaldo = Math.min(...flujo.map(f=>f.saldo));
-  const totalPagos = data.pagos.filter(p=>!p.pagado).reduce((a,p)=>a+p.monto,0);
-  addBotMsg(`Hola Ignacio. TenÃ©s <strong style="color:var(--accent)">${fmt(data.disponible)}</strong> disponibles hoy y <strong style="color:var(--red)">${fmt(totalPagos)}</strong> en pagos pendientes. El saldo proyectado mÃ­nimo es <strong style="color:${minSaldo<0?'var(--red)':'var(--accent)}'}">${fmt(minSaldo)}</strong>. Â¿En quÃ© te ayudo?`);
-}
+<div class="modal-overlay" id="modal-gasto">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <h3>Nuevo gasto</h3>
+      <button class="modal-close" onclick="closeModal('modal-gasto')">?</button>
+    </div>
+    <div class="form-group">
+      <label>Concepto</label>
+      <input class="form-control" id="gasto-concepto" placeholder="Alquiler, luz, sueldo...">
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Categoría</label>
+        <select class="form-control" id="gasto-categoria">
+          <option>Sueldos</option>
+          <option>Infraestructura</option>
+          <option>Servicios</option>
+          <option>Insumos</option>
+          <option>Impuestos</option>
+          <option>Otros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Monto ($)</label>
+        <input type="number" class="form-control" id="gasto-monto" placeholder="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Fecha de vencimiento</label>
+      <input type="date" class="form-control" id="gasto-vencimiento">
+    </div>
+    <div class="form-group">
+      <label>Estado</label>
+      <select class="form-control" id="gasto-estado">
+        <option value="false">Sin pagar</option>
+        <option value="true">Pagado</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarGasto()">Guardar</button>
+    </div>
+  </div>
+</div>
 
-function addBotMsg(text) {
-  aiHistory.push({role:'assistant', text});
-  renderMsgs();
-}
+<div class="modal-overlay" id="modal-cobro">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <h3>Cobrar a <span id="cobro-modal-titulo"></span></h3>
+      <button class="modal-close" onclick="document.getElementById('modal-cobro').classList.remove('open')">?</button>
+    </div>
+    <input type="hidden" id="cobro-pac-id">
+    <div id="cobro-deuda-actual" style="font-size:13px;font-weight:600;margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>Concepto</label>
+      <select class="form-control" id="cobro-tipo" onchange="onCobroTipoChange()">
+        <option>Por sesión</option>
+        <option>Pack 5 sesiones</option>
+        <option>Pack 10 sesiones</option>
+        <option>Pack mensual</option>
+        <option>Salda deuda</option>
+      </select>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Monto ($)</label>
+        <input type="number" class="form-control" id="cobro-monto" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Estado</label>
+        <select class="form-control" id="cobro-estado">
+          <option>Pagado</option>
+          <option>Pendiente</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="document.getElementById('modal-cobro').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCobro()">Confirmar cobro</button>
+    </div>
+  </div>
+</div>
 
-function renderMsgs() {
-  document.getElementById('ai-messages').innerHTML = aiHistory.map(m =>
-    `<div class="ai-msg ${m.role==='assistant'?'bot':'user'}">${m.text}</div>`
-  ).join('');
-  const el = document.getElementById('ai-messages');
-  el.scrollTop = el.scrollHeight;
-}
+<div class="modal-overlay" id="modal-turno-detalle">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <h3>Detalle del turno</h3>
+      <button class="modal-close" onclick="closeModal('modal-turno-detalle')">?</button>
+    </div>
+    <div id="turno-detalle-content"></div>
+  </div>
+</div>
 
-async function askQuick(q) { document.getElementById('ai-input').value = q; await sendAI(); }
+<div class="modal-overlay" id="modal-servicio-detail">
+  <div class="modal" style="width:580px;max-height:88vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <h3 id="servicio-modal-title">Servicio</h3>
+      <button class="modal-close" onclick="closeModal('modal-servicio-detail')">?</button>
+    </div>
+    <div id="servicio-detail-content" style="overflow-y:auto;flex:1;padding-right:4px"></div>
+    <div class="modal-actions" style="flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('modal-servicio-detail')">Cerrar</button>
+    </div>
+  </div>
+</div>
 
-async function sendAI() {
-  const input = document.getElementById('ai-input');
-  const q = input.value.trim();
-  if(!q) return;
-  input.value = '';
-  aiHistory.push({role:'user', text: q});
-  renderMsgs();
-  addBotMsg('<em style="color:var(--text3)">Analizando tu situaciÃ³n...</em>');
+<div class="modal-overlay" id="modal-ficha">
+  <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <h3>Ficha del paciente</h3>
+      <button class="modal-close" onclick="closeModal('modal-ficha')">?</button>
+    </div>
+    <div id="ficha-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ficha')">Cerrar</button>
+    </div>
+  </div>
+</div>
 
-  const flujo = calcFlujo();
-  const systemPrompt = `Sos un asesor financiero de confianza para Ignacio, empresario de Mendoza, Argentina. Hablale de vos a vos, en espaÃ±ol rioplatense. SÃ© directo, concreto y Ãºtil. No uses listas largas, respondÃ© en 2-4 oraciones mÃ¡ximo salvo que te pidan un anÃ¡lisis detallado.
+<div class="modal-overlay" id="modal-informe">
+  <div class="modal" style="width:680px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <h3>Informe de rehabilitación</h3>
+      <button class="modal-close" onclick="closeModal('modal-informe')">?</button>
+    </div>
+    <div id="informe-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="copiarInformePaciente()">Copiar texto</button>
+      <button class="btn btn-success" onclick="compartirInformeWhatsApp()">WhatsApp</button>
+      <button class="btn btn-primary" onclick="compartirInformeMail()">Mail</button>
+    </div>
+  </div>
+</div>
 
-DATOS ACTUALES (${TODAY}):
-- Disponible hoy: $${data.disponible.toLocaleString('es-AR')}
-- Cobros pendientes: ${data.cobros.filter(c=>!c.cobrado).map(c=>`${c.nombre} $${c.monto.toLocaleString('es-AR')} el ${c.fecha}`).join(' | ')}
-- Pagos pendientes: ${data.pagos.filter(p=>!p.pagado).map(p=>`${p.nombre} (${p.cat}) $${p.monto.toLocaleString('es-AR')} vence ${p.fecha}`).join(' | ')}
-- Flujo proyectado: ${flujo.map(f=>`${f.fecha}: ${f.concepto} â†’ saldo $${Math.round(f.saldo).toLocaleString('es-AR')}`).join(' | ')}`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: aiHistory.filter(m=>m.text&&!m.text.includes('Analizando')).map(m=>({role:m.role==='bot'||m.role==='assistant'?'assistant':'user', content:m.text.replace(/<[^>]+>/g,'')}))
-      })
-    });
-    const d = await res.json();
-    const reply = d.content?.map(c=>c.text||'').join('') || 'No pude obtener respuesta.';
-    aiHistory[aiHistory.length-1] = {role:'assistant', text: reply};
-  } catch(e) {
-    aiHistory[aiHistory.length-1] = {role:'assistant', text:'Error al conectar. VerificÃ¡ la conexiÃ³n e intentÃ¡ de nuevo.'};
-  }
-  renderMsgs();
-}
-
-// CONFIG
-function saveSaldo() {
-  const v = parseFloat(document.getElementById('conf-saldo').value);
-  if(isNaN(v)) return alert('IngresÃ¡ un nÃºmero vÃ¡lido');
-  data.disponible = v;
-  save();
-  alert('Saldo actualizado a ' + fmt(v));
-}
-
-function exportJSON() {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'flujo-' + TODAY + '.json';
-  a.click();
-}
-
-function resetData() {
-  if(!confirm('Â¿Borrar TODOS los datos? Esta acciÃ³n no se puede deshacer.')) return;
-  localStorage.removeItem('flujo_v1');
-  location.reload();
-}
-
-// INIT
-updateTopbar();
-renderDashboard();
-</script>
+<script src="assets/js/app.js"></script>
 </body>
 </html>
+
