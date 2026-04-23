@@ -744,7 +744,7 @@ function renderPagos() {
   checklist.innerHTML = Object.entries(grupos).map(([cat, items]) => `
     <div style="margin-bottom:4px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:8px 4px 4px;display:flex;align-items:center;gap:6px">
-        <span>${categoriaIcono[cat]||'??'}</span> ${cat}
+        <span>${categoriaIcono[cat] || '📌'}</span> ${cat}
       </div>
       ${items.map(g => {
         const venc = g.vencimiento ? new Date(g.vencimiento) : null;
@@ -753,14 +753,14 @@ function renderPagos() {
         return `
           <div class="pago-checklist-item ${g.pagado?'cobrado':''}" onclick="toggleGasto(${g.id})">
             <div class="pago-check ${g.pagado?'checked':''}">
-              ${g.pagado?'?':''}
+              ${g.pagado ? '✓' : ''}
             </div>
             <div style="flex:1">
               <div style="font-weight:600;font-size:14px;${g.pagado?'text-decoration:line-through;color:var(--text-muted)':''}">${g.concepto}</div>
               <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
                 Vence: ${g.vencimiento||'—'}
-                ${vencido ? '<span style="color:var(--red);font-weight:600;margin-left:6px">? Vencido</span>' : ''}
-                ${vencHoy ? '<span style="color:var(--orange);font-weight:600;margin-left:6px">? Hoy</span>' : ''}
+                ${vencido ? '<span style="color:var(--red);font-weight:600;margin-left:6px">⚠️ Vencido</span>' : ''}
+                ${vencHoy ? '<span style="color:var(--orange);font-weight:600;margin-left:6px">⏳ Hoy</span>' : ''}
               </div>
             </div>
             <div style="text-align:right">

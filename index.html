@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KineApp â€” Centro KinesiolÃ³gico</title>
+<title>KineApp — Centro Kinesiológico</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
@@ -14,7 +14,7 @@
 <aside class="sidebar">
   <div class="sidebar-logo">
     <h1>KineApp</h1>
-    <p>Centro KinesiolÃ³gico</p>
+    <p>Centro Kinesiológico</p>
   </div>
   <nav class="nav">
     <div class="nav-item active" onclick="navigate('dashboard')">
@@ -42,7 +42,7 @@
       <span class="icon">&#9881;&#65039;</span><span>Servicios</span>
     </div>
   </nav>
-  <div class="sidebar-footer">v1.0 Â· 2025</div>
+  <div class="sidebar-footer">v1.0 · 2025</div>
 </aside>
 
 <!-- MAIN -->
@@ -61,7 +61,7 @@
       <div class="stat-card">
         <div class="stat-num" style="color:var(--primary)" id="stat-hoy">8</div>
         <div class="stat-label">Turnos hoy</div>
-        <div class="stat-trend up">&#8599; 2 mÃ¡s que ayer</div>
+        <div class="stat-trend up">&#8599; 2 más que ayer</div>
       </div>
       <div class="stat-card">
         <div class="stat-num" style="color:var(--green)" id="stat-pac">47</div>
@@ -86,7 +86,7 @@
         <div id="turnos-hoy-list"></div>
       </div>
       <div class="card">
-        <div class="card-title">Ãšltimos movimientos de caja</div>
+        <div class="card-title">Últimos movimientos de caja</div>
         <div id="caja-list"></div>
       </div>
     </div>
@@ -99,7 +99,7 @@
       <div style="display:flex;gap:8px">
         <select class="form-control" id="agenda-prof" style="width:160px">
           <option>Todos</option>
-          <option>Lic. GarcÃ­a</option>
+          <option>Lic. García</option>
           <option>Lic. Romero</option>
           <option>Lic. Paz</option>
         </select>
@@ -109,14 +109,14 @@
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div class="week-nav">
-          <button onclick="changeWeek(-1)">â€¹</button>
+          <button onclick="changeWeek(-1)">‹</button>
           <span class="week-date" id="week-label">Semana actual</span>
-          <button onclick="changeWeek(1)">â€º</button>
+          <button onclick="changeWeek(1)">›</button>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <button class="filtro-act active" data-serv="" onclick="setFiltroActividad(this,'')">Todos</button>
-          <button class="filtro-act" data-serv="rehab" onclick="setFiltroActividad(this,'rehab')" style="--fc:var(--primary)">&#129460; RehabilitaciÃ³n</button>
-          <button class="filtro-act" data-serv="gym" onclick="setFiltroActividad(this,'gym')" style="--fc:var(--teal)">&#127939; ReadaptaciÃ³n</button>
+          <button class="filtro-act" data-serv="rehab" onclick="setFiltroActividad(this,'rehab')" style="--fc:var(--primary)">&#129460; Rehabilitación</button>
+          <button class="filtro-act" data-serv="gym" onclick="setFiltroActividad(this,'gym')" style="--fc:var(--teal)">&#127939; Readaptación</button>
           <button class="filtro-act" data-serv="recovery" onclick="setFiltroActividad(this,'recovery')" style="--fc:var(--purple)">&#10052;&#65039; Recovery</button>
           <button class="filtro-act" data-serv="pilates" onclick="setFiltroActividad(this,'pilates')" style="--fc:var(--orange)">? Pilates</button>
           <button class="filtro-act" data-serv="funcional" onclick="setFiltroActividad(this,'funcional')" style="--fc:var(--green)">? Funcional</button>
@@ -440,7 +440,7 @@
     <div class="form-group">
       <label>Profesional</label>
       <select class="form-control" id="turno-prof">
-        <option>Lic. GarcÃ­a</option>
+        <option>Lic. García</option>
         <option>Lic. Romero</option>
         <option>Lic. Paz</option>
       </select>
@@ -547,7 +547,7 @@
     <div class="form-group">
       <label>Profesional asignado</label>
       <select class="form-control" id="pac-prof">
-        <option>Lic. GarcÃ­a</option>
+        <option>Lic. García</option>
         <option>Lic. Romero</option>
         <option>Lic. Paz</option>
       </select>
@@ -923,5 +923,6 @@
 <script src="assets/js/app.js"></script>
 </body>
 </html>
+
 
 
