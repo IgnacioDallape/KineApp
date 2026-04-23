@@ -202,7 +202,7 @@ function renderDashboard() {
       const restantes = p.sesionesAuth - p.sesiones;
       return `
         <div style="background:${restantes===0?'var(--red-light)':'var(--orange-light)'};border:1px solid ${restantes===0?'#fecaca':'#fed7aa'};border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:20px">${restantes===0?'??':'??'}</span>
+          <span style="font-size:20px">${restantes===0?'⛔':'⚠️'}</span>
           <div style="flex:1">
             <strong>${p.nombre}</strong> —
             ${restantes===0
@@ -338,9 +338,9 @@ function abrirNuevoTurno(fecha, hora) {
 function mostrarTurno(id) {
   const t = state.turnos.find(x => x.id === id);
   if(!t) return;
-  const asistLabel = t.asistencia === 'asistio' ? '? Asistió'
-    : t.asistencia === 'ausente' ? '? Ausente'
-    : t.asistencia === 'reprog' ? '? Reprogramado'
+  const asistLabel = t.asistencia === 'asistio' ? '✅ Asistió'
+    : t.asistencia === 'ausente' ? '❌ Ausente'
+    : t.asistencia === 'reprog' ? '🔄 Reprogramado'
     : '— Pendiente';
   document.getElementById('turno-detalle-content').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
@@ -370,9 +370,9 @@ function mostrarTurno(id) {
     </div>
     ${t.notas ? `<div style="background:var(--primary-light);border-radius:8px;padding:10px;font-size:13px;color:var(--primary)">📝 ${t.notas}</div>` : ''}
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-      <button class="btn btn-sm btn-success" onclick="marcarTurnoAsist(${t.id},'asistio')">? Asistió</button>
-      <button class="btn btn-sm btn-danger" onclick="marcarTurnoAsist(${t.id},'ausente')">? Ausente</button>
-      <button class="btn btn-sm btn-secondary" onclick="marcarTurnoAsist(${t.id},'reprog')">? Reprogramar</button>
+      <button class="btn btn-sm btn-success" onclick="marcarTurnoAsist(${t.id},'asistio')">✅ Asistió</button>
+      <button class="btn btn-sm btn-danger" onclick="marcarTurnoAsist(${t.id},'ausente')">❌ Ausente</button>
+      <button class="btn btn-sm btn-secondary" onclick="marcarTurnoAsist(${t.id},'reprog')">🔄 Reprogramar</button>
       <button class="btn btn-sm btn-secondary" onclick="eliminarTurno(${t.id})" style="margin-left:auto;color:var(--red)">Eliminar</button>
     </div>
   `;
@@ -414,7 +414,7 @@ function renderPacientes(filtro='', servFiltro='') {
     const restantes = p.sesionesAuth != null ? p.sesionesAuth - p.sesiones : null;
     const sesAlert = restantes === 0 ? 'badge-red' : restantes === 1 ? 'badge-orange' : 'badge-gray';
     const sesLabel = p.sesionesAuth != null
-      ? `${p.sesiones}/${p.sesionesAuth} ${restantes===0?'??':restantes===1?'??':''}`
+      ? `${p.sesiones}/${p.sesionesAuth} ${restantes===0?'⛔':restantes===1?'⚠️':''}`
       : `${p.sesiones}`;
     return `
     <tr>
@@ -431,7 +431,7 @@ function renderPacientes(filtro='', servFiltro='') {
       <td><span class="badge ${p.deuda>0?'badge-red':'badge-green'}">${p.deuda>0?'Debe $'+p.deuda.toLocaleString():'Al día'}</span></td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-sm btn-secondary" onclick="verPaciente(${p.id})">Ver ficha</button>
-        <button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmarBorrarPaciente(${p.id})">?</button>
+        <button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmarBorrarPaciente(${p.id})">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -443,7 +443,7 @@ function renderPacientes(filtro='', servFiltro='') {
       : pacsFiltrados.map(p => {
           const restantes = p.sesionesAuth != null ? p.sesionesAuth - p.sesiones : null;
           const sesLabel = p.sesionesAuth != null
-            ? `${p.sesiones}/${p.sesionesAuth} ${restantes===0?'??':restantes===1?'??':''}`
+            ? `${p.sesiones}/${p.sesionesAuth} ${restantes===0?'⛔':restantes===1?'⚠️':''}`
             : `${p.sesiones}`;
           const sesColor = restantes===0?'var(--red)':restantes===1?'var(--orange)':'var(--primary)';
           const os = p.tipoCobertura==='obra_social' && p.obraSocialId
@@ -474,7 +474,7 @@ function renderPacientes(filtro='', servFiltro='') {
               <span class="badge ${p.deuda>0?'badge-red':'badge-green'}">${p.deuda>0?'Debe $'+p.deuda.toLocaleString('es-AR'):'Al día'}</span>
               <div class="pac-card-actions">
                 <button class="btn btn-sm btn-secondary" onclick="verPaciente(${p.id})">Ver ficha</button>
-                <button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmarBorrarPaciente(${p.id})">? Borrar</button>
+                <button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmarBorrarPaciente(${p.id})">✕ Borrar</button>
               </div>
             </div>
           </div>`;
@@ -646,9 +646,9 @@ function renderAsistencia() {
         </div>
       </div>
       <div class="asist-actions">
-        <button class="asist-btn asistio ${t.asistencia==='asistio'?'active-asistio':''}" onclick="marcarAsist(${t.id},'asistio')" title="Asistió">?</button>
-        <button class="asist-btn ausente ${t.asistencia==='ausente'?'active-ausente':''}" onclick="marcarAsist(${t.id},'ausente')" title="Ausente">?</button>
-        <button class="asist-btn reprog ${t.asistencia==='reprog'?'active-reprog':''}" onclick="marcarAsist(${t.id},'reprog')" title="Reprogramar">?</button>
+        <button class="asist-btn asistio ${t.asistencia==='asistio'?'active-asistio':''}" onclick="marcarAsist(${t.id},'asistio')" title="Asistió">✅</button>
+        <button class="asist-btn ausente ${t.asistencia==='ausente'?'active-ausente':''}" onclick="marcarAsist(${t.id},'ausente')" title="Ausente">❌</button>
+        <button class="asist-btn reprog ${t.asistencia==='reprog'?'active-reprog':''}" onclick="marcarAsist(${t.id},'reprog')" title="Reprogramar">🔄</button>
       </div>
     </div>
   `).join('');
@@ -939,7 +939,7 @@ function renderRecordatorios() {
       <div class="reminder-status"></div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:500">${p.nombre}</div>
-        <div style="font-size:11px;color:var(--text-muted)">Enviado el ${new Date(Date.now()-i*86400000).toLocaleDateString('es-AR')} · Respondió ?</div>
+        <div style="font-size:11px;color:var(--text-muted)">Enviado el ${new Date(Date.now()-i*86400000).toLocaleDateString('es-AR')} · Respondió ✅</div>
       </div>
       <span class="badge badge-green">Enviado</span>
     </div>
@@ -947,7 +947,7 @@ function renderRecordatorios() {
 }
 
 function guardarRecConfig() {
-  alert('? Configuración guardada.\n\nLos recordatorios se enviarán automáticamente\n' + document.getElementById('rec-tiempo1').options[document.getElementById('rec-tiempo1').selectedIndex].text);
+  alert('✅ Configuración guardada.\n\nLos recordatorios se enviarán automáticamente\n' + document.getElementById('rec-tiempo1').options[document.getElementById('rec-tiempo1').selectedIndex].text);
 }
 
 // ===== SERVICIOS =====
@@ -965,7 +965,7 @@ function renderServicios() {
             <div><div class="servicio-count" style="color:var(--${s.color||'primary'})">${pacs}</div><div style="font-size:12px;color:var(--text-muted)">pacientes</div></div>
             <div><div class="servicio-count" style="color:var(--${s.color||'primary'})">${turnos}</div><div style="font-size:12px;color:var(--text-muted)">turnos totales</div></div>
           </div>
-          <span style="font-size:12px;color:var(--primary);font-weight:600">Ver detalle ?</span>
+          <span style="font-size:12px;color:var(--primary);font-weight:600">Ver detalle →</span>
         </div>
       </div>
     `;
@@ -989,7 +989,7 @@ function renderServicios() {
             <span style="font-size:13px">${t.concepto}</span>
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-weight:700;font-size:14px;color:var(--green)">$${t.monto.toLocaleString('es-AR')}</span>
-              <button onclick="eliminarTarifa(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px">?</button>
+              <button onclick="eliminarTarifa(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px">✕</button>
             </div>
           </div>
         `).join('')}
@@ -1011,7 +1011,7 @@ function renderServicios() {
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="badge badge-blue">${os.cobertura}</span>
-            <button onclick="eliminarObraSocial(${os.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px">?</button>
+            <button onclick="eliminarObraSocial(${os.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px">✕</button>
           </div>
         </div>
         <div style="display:flex;gap:0;border-top:1px solid var(--border)">
@@ -1100,7 +1100,7 @@ function verServicio(nombreServicio) {
             </div>
             <div style="display:flex;align-items:center;gap:10px">
               ${proximoTurno ? `<span class="badge badge-blue">Próx: ${proximoTurno.fecha} ${proximoTurno.hora}</span>` : '<span class="badge badge-gray">Sin turnos</span>'}
-              <span style="color:var(--text-muted);font-size:16px;transition:transform .2s" id="spac-arrow-${p.id}">?</span>
+              <span style="color:var(--text-muted);font-size:16px;transition:transform .2s" id="spac-arrow-${p.id}">▾</span>
             </div>
           </div>
           <div class="servicio-pac-turnos" id="spac-turnos-${p.id}" style="display:none">
@@ -1116,9 +1116,9 @@ function verServicio(nombreServicio) {
                     <div style="font-size:13px;font-weight:500">${t.prof} · ${t.duracion}min</div>
                     ${t.notas ? `<div style="font-size:11px;color:var(--text-muted)">${t.notas}</div>` : ''}
                   </div>
-                  ${t.asistencia === 'asistio' ? '<span class="badge badge-green">? Asistió</span>'
-                    : t.asistencia === 'ausente' ? '<span class="badge badge-red">? Ausente</span>'
-                    : t.asistencia === 'reprog' ? '<span class="badge badge-orange">? Reprog.</span>'
+                  ${t.asistencia === 'asistio' ? '<span class="badge badge-green">✅ Asistió</span>'
+                    : t.asistencia === 'ausente' ? '<span class="badge badge-red">❌ Ausente</span>'
+                    : t.asistencia === 'reprog' ? '<span class="badge badge-orange">🔄 Reprog.</span>'
                     : '<span class="badge badge-gray">Pendiente</span>'}
                 </div>
               `).join('')
@@ -1141,7 +1141,7 @@ function toggleServicioPac(id) {
   const arrow = document.getElementById(`spac-arrow-${id}`);
   const isOpen = el.style.display !== 'none';
   el.style.display = isOpen ? 'none' : 'block';
-  arrow.style.transform = isOpen ? '' : 'rotate(-90deg)';
+  arrow.style.transform = isOpen ? '' : 'rotate(-180deg)';
 }
 
 // ===== TABS =====
@@ -1517,7 +1517,7 @@ function compartirInformeWhatsApp(id) {
   const paciente = obtenerPacienteInforme(id);
   if(!paciente) return;
   if(!paciente.tel) {
-    alert('Este paciente no tiene telÃ©fono cargado.');
+    alert('Este paciente no tiene teléfono cargado.');
     return;
   }
 
@@ -1530,7 +1530,7 @@ function compartirInformeMail(id) {
   const paciente = obtenerPacienteInforme(id);
   if(!paciente) return;
 
-  const asunto = encodeURIComponent(`Informe de rehabilitaciÃ³n - ${paciente.nombre}`);
+  const asunto = encodeURIComponent(`Informe de rehabilitación - ${paciente.nombre}`);
   const cuerpo = encodeURIComponent(generarInformePacienteTexto(paciente));
   const destinatario = encodeURIComponent(paciente.email || '');
   window.location.href = `mailto:${destinatario}?subject=${asunto}&body=${cuerpo}`;
@@ -1538,7 +1538,7 @@ function compartirInformeMail(id) {
 
 function guardarPaciente() {
   const nombre = document.getElementById('pac-nombre').value.trim();
-  if(!nombre) { alert('IngresÃ¡ el nombre del paciente'); return; }
+  if(!nombre) { alert('Ingresá el nombre del paciente'); return; }
 
   const tipoCobertura = document.getElementById('pac-cobertura').value;
   const obraSocialId = tipoCobertura === 'obra_social' ? parseInt(document.getElementById('pac-os-select').value) || null : null;

@@ -118,8 +118,8 @@
           <button class="filtro-act" data-serv="rehab" onclick="setFiltroActividad(this,'rehab')" style="--fc:var(--primary)">&#129460; Rehabilitación</button>
           <button class="filtro-act" data-serv="gym" onclick="setFiltroActividad(this,'gym')" style="--fc:var(--teal)">&#127939; Readaptación</button>
           <button class="filtro-act" data-serv="recovery" onclick="setFiltroActividad(this,'recovery')" style="--fc:var(--purple)">&#10052;&#65039; Recovery</button>
-          <button class="filtro-act" data-serv="pilates" onclick="setFiltroActividad(this,'pilates')" style="--fc:var(--orange)">? Pilates</button>
-          <button class="filtro-act" data-serv="funcional" onclick="setFiltroActividad(this,'funcional')" style="--fc:var(--green)">? Funcional</button>
+          <button class="filtro-act" data-serv="pilates" onclick="setFiltroActividad(this,'pilates')" style="--fc:var(--orange)">🧘 Pilates</button>
+          <button class="filtro-act" data-serv="funcional" onclick="setFiltroActividad(this,'funcional')" style="--fc:var(--green)">💪 Funcional</button>
         </div>
       </div>
       <div style="padding:16px;overflow-x:auto">
@@ -138,12 +138,12 @@
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <div class="search-wrap" style="flex:1;min-width:200px">
           <span class="search-icon">&#128269;</span>
-          <input class="form-control" placeholder="Buscar por nombre o lesiÃ³n..." oninput="filtrarPacientes(this.value)">
+          <input class="form-control" placeholder="Buscar por nombre o lesión..." oninput="filtrarPacientes(this.value)">
         </div>
         <select class="form-control" style="width:160px" onchange="filtrarPorServicio(this.value)">
           <option value="">Todos los servicios</option>
-          <option>RehabilitaciÃ³n</option>
-          <option>ReadaptaciÃ³n</option>
+          <option>Rehabilitación</option>
+          <option>Readaptación</option>
           <option>Pilates</option>
           <option>Recovery</option>
           <option>Entrenamiento funcional</option>
@@ -154,7 +154,7 @@
       <div class="table-wrap" id="pacientes-tabla-desktop">
         <table id="tabla-pacientes">
           <thead><tr>
-            <th>Paciente</th><th>TelÃ©fono</th><th>Servicio</th><th>LesiÃ³n/DiagnÃ³stico</th><th>Profesional</th><th>Sesiones</th><th>Estado pago</th><th></th>
+            <th>Paciente</th><th>Teléfono</th><th>Servicio</th><th>Lesión/Diagnóstico</th><th>Profesional</th><th>Sesiones</th><th>Estado pago</th><th></th>
           </tr></thead>
           <tbody id="tbody-pacientes"></tbody>
         </table>
@@ -166,7 +166,7 @@
   <!-- ASISTENCIA -->
   <div class="page" id="page-asistencia">
     <div class="page-header">
-      <div><h2>Control de asistencia</h2><p>RegistrÃ¡ la asistencia diaria</p></div>
+      <div><h2>Control de asistencia</h2><p>Registrá la asistencia diaria</p></div>
       <input type="date" class="form-control" id="fecha-asist" style="width:180px" onchange="renderAsistencia()">
     </div>
     <div class="grid-3" style="margin-bottom:20px">
@@ -184,7 +184,7 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-title">Turnos del dÃ­a</div>
+      <div class="card-title">Turnos del día</div>
       <div id="asist-list"></div>
     </div>
   </div>
@@ -192,7 +192,7 @@
   <!-- PAGOS (gastos del centro) -->
   <div class="page" id="page-pagos">
     <div class="page-header">
-      <div><h2>Gastos del centro</h2><p>TildÃ¡ lo que pagaste este mes</p></div>
+      <div><h2>Gastos del centro</h2><p>Tildá lo que pagaste este mes</p></div>
       <button class="btn btn-primary" onclick="openModal('modal-gasto')">+ Agregar gasto</button>
     </div>
 
@@ -276,20 +276,20 @@
   <!-- RECORDATORIOS -->
   <div class="page" id="page-recordatorios">
     <div class="page-header">
-      <div><h2>Recordatorios automÃ¡ticos</h2><p>ReducÃ­ el ausentismo hasta un 40%</p></div>
+      <div><h2>Recordatorios automáticos</h2><p>Reducí el ausentismo hasta un 40%</p></div>
     </div>
     <div class="card" style="margin-bottom:16px;background:var(--primary-light);border-color:var(--primary-soft)">
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-size:28px">&#128276;</span>
         <div>
           <div style="font-weight:600;font-size:15px;color:var(--primary)">Impacto real de los recordatorios</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:2px">Los recordatorios automÃ¡ticos reducen el ausentismo entre 30% y 40%. Esta semana ya se enviaron <strong id="rec-enviados">12</strong> recordatorios.</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:2px">Los recordatorios automáticos reducen el ausentismo entre 30% y 40%. Esta semana ya se enviaron <strong id="rec-enviados">12</strong> recordatorios.</div>
         </div>
       </div>
     </div>
     <div class="grid-2" style="margin-bottom:16px">
       <div class="card">
-        <div class="card-title">ConfiguraciÃ³n</div>
+        <div class="card-title">Configuración</div>
         <div class="form-group">
           <label>Recordatorio principal</label>
           <select class="form-control" id="rec-tiempo1">
@@ -316,17 +316,17 @@
         </div>
         <div class="form-group">
           <label>Mensaje personalizado</label>
-          <textarea class="form-control" rows="3" id="rec-mensaje">Hola {nombre} ?? Te recordamos tu turno en el centro para maÃ±ana {fecha} a las {hora} con {profesional}. Â¡Nos vemos!</textarea>
+          <textarea class="form-control" rows="3" id="rec-mensaje">Hola {nombre}. Te recordamos tu turno en el centro para mañana {fecha} a las {hora} con {profesional}. ¡Nos vemos!</textarea>
         </div>
-        <button class="btn btn-primary" onclick="guardarRecConfig()">Guardar configuraciÃ³n</button>
+        <button class="btn btn-primary" onclick="guardarRecConfig()">Guardar configuración</button>
       </div>
       <div class="card">
-        <div class="card-title">PrÃ³ximos recordatorios a enviar</div>
+        <div class="card-title">Próximos recordatorios a enviar</div>
         <div id="proximos-rec"></div>
       </div>
     </div>
     <div class="card">
-      <div class="card-title">Historial de envÃ­os</div>
+      <div class="card-title">Historial de envíos</div>
       <div id="hist-rec"></div>
     </div>
   </div>
@@ -334,7 +334,7 @@
   <!-- SERVICIOS -->
   <div class="page" id="page-servicios">
     <div class="page-header">
-      <div><h2>OrganizaciÃ³n por servicios</h2><p>Centro deportivo integral</p></div>
+      <div><h2>Organización por servicios</h2><p>Centro deportivo integral</p></div>
       <button class="btn btn-primary" onclick="openModal('modal-servicio')">+ Servicio</button>
     </div>
     <div class="grid-3" id="servicios-grid" style="margin-bottom:24px"></div>
@@ -382,7 +382,7 @@
       <span class="bicon">&#128184;</span>Gastos
     </div>
     <div class="bnav-item" id="bnav-mas" onclick="toggleMasMenu()">
-      <span class="bicon">?</span>MÃ¡s
+      <span class="bicon">⋯</span>Más
     </div>
   </div>
 </nav>
@@ -399,12 +399,12 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Nuevo turno</h3>
-      <button class="modal-close" onclick="closeModal('modal-turno')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-turno')">✕</button>
     </div>
     <div class="form-group">
       <label>Paciente</label>
       <select class="form-control" id="turno-paciente">
-        <option>â€” Seleccionar â€”</option>
+        <option>— Seleccionar —</option>
       </select>
     </div>
     <div class="grid-2">
@@ -419,7 +419,7 @@
     </div>
     <div class="grid-2">
       <div class="form-group">
-        <label>DuraciÃ³n</label>
+        <label>Duración</label>
         <select class="form-control" id="turno-duracion">
           <option value="30">30 min</option>
           <option value="45" selected>45 min</option>
@@ -429,8 +429,8 @@
       <div class="form-group">
         <label>Servicio</label>
         <select class="form-control" id="turno-servicio">
-          <option>RehabilitaciÃ³n</option>
-          <option>ReadaptaciÃ³n</option>
+          <option>Rehabilitación</option>
+          <option>Readaptación</option>
           <option>Pilates</option>
           <option>Recovery</option>
           <option>Entrenamiento funcional</option>
@@ -460,15 +460,15 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Nuevo paciente</h3>
-      <button class="modal-close" onclick="closeModal('modal-paciente')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-paciente')">✕</button>
     </div>
     <div class="grid-2">
       <div class="form-group">
         <label>Nombre completo</label>
-        <input class="form-control" id="pac-nombre" placeholder="Juan PÃ©rez">
+        <input class="form-control" id="pac-nombre" placeholder="Juan Pérez">
       </div>
       <div class="form-group">
-        <label>TelÃ©fono</label>
+        <label>Teléfono</label>
         <input class="form-control" id="pac-tel" placeholder="261 123 4567" type="tel">
       </div>
     </div>
@@ -485,13 +485,13 @@
     <div class="grid-2">
       <div class="form-group">
         <label>Deporte / Actividad</label>
-        <input class="form-control" id="pac-deporte" placeholder="FÃºtbol, running...">
+        <input class="form-control" id="pac-deporte" placeholder="Fútbol, running...">
       </div>
       <div class="form-group">
         <label>Servicio</label>
         <select class="form-control" id="pac-servicio">
-          <option>RehabilitaciÃ³n</option>
-          <option>ReadaptaciÃ³n</option>
+          <option>Rehabilitación</option>
+          <option>Readaptación</option>
           <option>Pilates</option>
           <option>Recovery</option>
           <option>Entrenamiento funcional</option>
@@ -500,18 +500,18 @@
     </div>
     <div class="form-group">
       <label>Motivo de consulta</label>
-      <input class="form-control" id="pac-motivo" placeholder="Â¿Por quÃ© consulta?">
+      <input class="form-control" id="pac-motivo" placeholder="¿Por qué consulta?">
     </div>
     <div class="form-group">
-      <label>LesiÃ³n / DiagnÃ³stico</label>
+      <label>Lesión / Diagnóstico</label>
       <input class="form-control" id="pac-lesion" placeholder="Esguince, lumbalgia...">
     </div>
     <div class="form-group">
       <label>Antecedentes relevantes</label>
-      <textarea class="form-control" id="pac-antecedentes" rows="3" placeholder="CirugÃ­as, recaÃ­das, antecedentes clÃ­nicos..."></textarea>
+      <textarea class="form-control" id="pac-antecedentes" rows="3" placeholder="Cirugías, recaídas, antecedentes clínicos..."></textarea>
     </div>
     <div class="form-group">
-      <label>EvaluaciÃ³n inicial</label>
+      <label>Evaluación inicial</label>
       <textarea class="form-control" id="pac-evaluacion" rows="3" placeholder="Dolor, movilidad, fuerza, pruebas funcionales..."></textarea>
     </div>
     <div class="grid-2">
@@ -522,22 +522,22 @@
       <div class="form-group">
         <label>Etapa actual</label>
         <select class="form-control" id="pac-etapa">
-          <option>EvaluaciÃ³n inicial</option>
+          <option>Evaluación inicial</option>
           <option>Control del dolor</option>
-          <option>Movilidad y activaciÃ³n</option>
+          <option>Movilidad y activación</option>
           <option>Fortalecimiento</option>
-          <option>ReadaptaciÃ³n funcional</option>
+          <option>Readaptación funcional</option>
           <option>Retorno al deporte</option>
           <option>Alta</option>
         </select>
       </div>
     </div>
     <div class="form-group">
-      <label>Plan de rehabilitaciÃ³n</label>
+      <label>Plan de rehabilitación</label>
       <textarea class="form-control" id="pac-plan" rows="3" placeholder="Frecuencia, ejercicios, objetivos de corto plazo..."></textarea>
     </div>
     <div class="form-group">
-      <label>ProgresiÃ³n prevista / actual</label>
+      <label>Progresión prevista / actual</label>
       <textarea class="form-control" id="pac-progresion" rows="3" placeholder="Criterios de avance, respuesta al tratamiento, hitos alcanzados..."></textarea>
     </div>
     <div class="form-group">
@@ -564,12 +564,12 @@
         <div class="form-group">
           <label>Obra social</label>
           <select class="form-control" id="pac-os-select" onchange="onObrasSocialChange()">
-            <option value="">â€” Seleccionar â€”</option>
+            <option value="">— Seleccionar —</option>
           </select>
         </div>
         <div id="pac-os-info" style="display:none;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px;font-size:13px;margin-bottom:12px">
           <div style="display:flex;gap:16px;flex-wrap:wrap">
-            <div><span style="color:var(--text-muted)">Reconoce por sesiÃ³n:</span> <strong id="pac-os-monto" style="color:var(--green)"></strong></div>
+            <div><span style="color:var(--text-muted)">Reconoce por sesión:</span> <strong id="pac-os-monto" style="color:var(--green)"></strong></div>
             <div><span style="color:var(--text-muted)">Adicional x10 sesiones:</span> <strong id="pac-os-adicional" style="color:var(--primary)"></strong></div>
             <div><span style="color:var(--text-muted)">Cobertura:</span> <strong id="pac-os-cobertura"></strong></div>
           </div>
@@ -588,18 +588,18 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Pedido mÃ©dico <span style="color:var(--text-muted);font-weight:400">(foto, opcional)</span></label>
+      <label>Pedido médico <span style="color:var(--text-muted);font-weight:400">(foto, opcional)</span></label>
         <div id="pac-foto-drop" onclick="document.getElementById('pac-foto-input').click()"
           style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg)">
           <div style="font-size:28px">&#128196;</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">TocÃ¡ para subir o sacar foto</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">Tocá para subir o sacar foto</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">JPG, PNG, PDF</div>
         </div>
         <input type="file" id="pac-foto-input" accept="image/*,application/pdf" style="display:none" onchange="previewFotoMedico(this)">
         <div id="pac-foto-preview" style="display:none;margin-top:10px;text-align:center">
           <img id="pac-foto-img" style="max-width:100%;max-height:160px;border-radius:var(--radius-sm);border:1px solid var(--border)">
           <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="pac-foto-nombre"></div>
-          <button onclick="limpiarFotoMedico()" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;margin-top:2px">? Quitar</button>
+          <button onclick="limpiarFotoMedico()" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;margin-top:2px">✕ Quitar</button>
         </div>
       </div>
     </div>
@@ -614,7 +614,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Registrar pago</h3>
-      <button class="modal-close" onclick="closeModal('modal-pago')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-pago')">✕</button>
     </div>
     <div class="form-group">
       <label>Paciente</label>
@@ -624,7 +624,7 @@
       <div class="form-group">
         <label>Tipo</label>
         <select class="form-control" id="pago-tipo">
-          <option>Por sesiÃ³n</option>
+          <option>Por sesión</option>
           <option>Pack 5 sesiones</option>
           <option>Pack 10 sesiones</option>
           <option>Pack mensual</option>
@@ -653,11 +653,11 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Nuevo servicio</h3>
-      <button class="modal-close" onclick="closeModal('modal-servicio')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-servicio')">✕</button>
     </div>
     <div class="form-group"><label>Nombre del servicio</label><input class="form-control" id="serv-nombre"></div>
-    <div class="form-group"><label>DescripciÃ³n</label><input class="form-control" id="serv-desc"></div>
-    <div class="form-group"><label>Ãcono (emoji)</label><input class="form-control" id="serv-icono" placeholder="ðŸ’ª" maxlength="2"></div>
+    <div class="form-group"><label>Descripción</label><input class="form-control" id="serv-desc"></div>
+    <div class="form-group"><label>Ícono (emoji)</label><input class="form-control" id="serv-icono" placeholder="💪" maxlength="2"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-servicio')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarServicio()">Guardar</button>
@@ -669,18 +669,18 @@
   <div class="modal" style="width:400px">
     <div class="modal-header">
       <h3>Nueva tarifa</h3>
-      <button class="modal-close" onclick="closeModal('modal-tarifa')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-tarifa')">✕</button>
     </div>
     <div class="form-group">
       <label>Servicio</label>
       <select class="form-control" id="tarifa-serv">
-        <option>RehabilitaciÃ³n</option><option>ReadaptaciÃ³n</option>
+        <option>Rehabilitación</option><option>Readaptación</option>
         <option>Pilates</option><option>Recovery</option><option>Entrenamiento funcional</option>
       </select>
     </div>
     <div class="form-group">
       <label>Concepto</label>
-      <input class="form-control" id="tarifa-concepto" placeholder="Ej: SesiÃ³n individual">
+      <input class="form-control" id="tarifa-concepto" placeholder="Ej: Sesión individual">
     </div>
     <div class="form-group">
       <label>Monto ($)</label>
@@ -697,7 +697,7 @@
   <div class="modal" style="width:440px">
     <div class="modal-header">
       <h3>Nueva obra social</h3>
-      <button class="modal-close" onclick="closeModal('modal-obrasocial')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-obrasocial')">✕</button>
     </div>
     <div class="grid-2">
       <div class="form-group">
@@ -711,7 +711,7 @@
     </div>
     <div class="grid-2">
       <div class="form-group">
-        <label>Reconoce por sesiÃ³n ($)</label>
+        <label>Reconoce por sesión ($)</label>
         <input type="number" class="form-control" id="os-monto-sesion" placeholder="0">
       </div>
       <div class="form-group">
@@ -721,10 +721,10 @@
     </div>
     <div class="form-group">
       <label>Servicios cubiertos</label>
-      <input class="form-control" id="os-servicios" placeholder="RehabilitaciÃ³n, Pilates">
+      <input class="form-control" id="os-servicios" placeholder="Rehabilitación, Pilates">
     </div>
     <div class="form-group">
-      <label>TelÃ©fono / contacto</label>
+      <label>Teléfono / contacto</label>
       <input class="form-control" id="os-contacto" placeholder="0800-...">
     </div>
     <div class="modal-actions">
@@ -737,13 +737,13 @@
 <div class="modal-overlay" id="modal-borrar-pac">
   <div class="modal" style="width:380px;text-align:center">
     <div style="font-size:48px;margin-bottom:12px">&#128465;&#65039;</div>
-    <h3 style="font-size:18px;margin-bottom:8px">Â¿Borrar paciente?</h3>
+    <h3 style="font-size:18px;margin-bottom:8px">¿Borrar paciente?</h3>
     <p style="font-weight:600;font-size:15px;margin-bottom:4px" id="borrar-pac-nombre"></p>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:6px" id="borrar-pac-detalle"></p>
-    <p style="font-size:13px;color:var(--red);margin-bottom:20px">TambiÃ©n se van a eliminar todos sus turnos de la agenda.</p>
+    <p style="font-size:13px;color:var(--red);margin-bottom:20px">También se van a eliminar todos sus turnos de la agenda.</p>
     <div style="display:flex;gap:8px">
       <button class="btn btn-secondary" onclick="document.getElementById('modal-borrar-pac').classList.remove('open')" style="flex:1">Cancelar</button>
-      <button class="btn" id="btn-confirmar-borrar" style="flex:1;background:var(--red);color:white">SÃ­, borrar</button>
+      <button class="btn" id="btn-confirmar-borrar" style="flex:1;background:var(--red);color:white">Sí, borrar</button>
     </div>
   </div>
 </div>
@@ -753,14 +753,14 @@
     <div style="font-size:56px;margin-bottom:12px">&#9888;&#65039;</div>
     <h3 style="font-size:18px;margin-bottom:8px">Sesiones agotadas</h3>
     <p style="color:var(--text-muted);font-size:14px;margin-bottom:6px">
-      <strong id="bloqueado-nombre"></strong> ya utilizÃ³ todas sus sesiones autorizadas.
+      <strong id="bloqueado-nombre"></strong> ya utilizó todas sus sesiones autorizadas.
     </p>
     <p style="font-size:13px;color:var(--red);font-weight:600;margin-bottom:4px">
-      <span id="bloqueado-auth"></span> sesiones autorizadas â€” todas utilizadas
+      <span id="bloqueado-auth"></span> sesiones autorizadas — todas utilizadas
     </p>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px" id="bloqueado-detalle"></p>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
-      Para seguir agendando necesitÃ¡s actualizar el pedido mÃ©dico y la cantidad de sesiones autorizadas en la ficha del paciente.
+      Para seguir agendando necesitás actualizar el pedido médico y la cantidad de sesiones autorizadas en la ficha del paciente.
     </p>
     <div style="display:flex;gap:8px">
       <button class="btn btn-secondary" onclick="document.getElementById('modal-bloqueado').classList.remove('open')" style="flex:1">Cancelar</button>
@@ -772,15 +772,15 @@
 <div class="modal-overlay" id="modal-completado">
   <div class="modal" style="width:400px;text-align:center">
     <div style="font-size:64px;margin-bottom:12px">&#127881;</div>
-    <h3 style="font-size:20px;margin-bottom:8px">Â¡Ciclo completo!</h3>
+    <h3 style="font-size:20px;margin-bottom:8px">¡Ciclo completo!</h3>
     <p style="color:var(--text-muted);font-size:14px;margin-bottom:4px">
-      <strong id="completado-nombre"></strong> asistiÃ³ a todas sus sesiones autorizadas.
+      <strong id="completado-nombre"></strong> asistió a todas sus sesiones autorizadas.
     </p>
     <p style="color:var(--primary);font-weight:600;font-size:15px;margin-bottom:20px">
-      <span id="completado-sesiones"></span> sesiones completadas ?
+      <span id="completado-sesiones"></span> sesiones completadas ✓
     </p>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
-      Acordate de solicitar un nuevo pedido mÃ©dico si el tratamiento continÃºa.
+      Acordate de solicitar un nuevo pedido médico si el tratamiento continúa.
     </p>
     <button class="btn btn-primary" onclick="document.getElementById('modal-completado').classList.remove('open')" style="width:100%">Entendido</button>
   </div>
@@ -790,7 +790,7 @@
   <div class="modal" style="width:420px">
     <div class="modal-header">
       <h3>Nuevo gasto</h3>
-      <button class="modal-close" onclick="closeModal('modal-gasto')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-gasto')">✕</button>
     </div>
     <div class="form-group">
       <label>Concepto</label>
@@ -798,7 +798,7 @@
     </div>
     <div class="grid-2">
       <div class="form-group">
-        <label>CategorÃ­a</label>
+        <label>Categoría</label>
         <select class="form-control" id="gasto-categoria">
           <option>Sueldos</option>
           <option>Infraestructura</option>
@@ -835,14 +835,14 @@
   <div class="modal" style="width:420px">
     <div class="modal-header">
       <h3>Cobrar a <span id="cobro-modal-titulo"></span></h3>
-      <button class="modal-close" onclick="document.getElementById('modal-cobro').classList.remove('open')">?</button>
+      <button class="modal-close" onclick="document.getElementById('modal-cobro').classList.remove('open')">✕</button>
     </div>
     <input type="hidden" id="cobro-pac-id">
     <div id="cobro-deuda-actual" style="font-size:13px;font-weight:600;margin-bottom:16px"></div>
     <div class="form-group">
       <label>Concepto</label>
       <select class="form-control" id="cobro-tipo" onchange="onCobroTipoChange()">
-        <option>Por sesiÃ³n</option>
+        <option>Por sesión</option>
         <option>Pack 5 sesiones</option>
         <option>Pack 10 sesiones</option>
         <option>Pack mensual</option>
@@ -873,7 +873,7 @@
   <div class="modal" style="width:460px">
     <div class="modal-header">
       <h3>Detalle del turno</h3>
-      <button class="modal-close" onclick="closeModal('modal-turno-detalle')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-turno-detalle')">✕</button>
     </div>
     <div id="turno-detalle-content"></div>
   </div>
@@ -883,7 +883,7 @@
   <div class="modal" style="width:580px;max-height:88vh;display:flex;flex-direction:column">
     <div class="modal-header" style="flex-shrink:0">
       <h3 id="servicio-modal-title">Servicio</h3>
-      <button class="modal-close" onclick="closeModal('modal-servicio-detail')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-servicio-detail')">✕</button>
     </div>
     <div id="servicio-detail-content" style="overflow-y:auto;flex:1;padding-right:4px"></div>
     <div class="modal-actions" style="flex-shrink:0">
@@ -896,7 +896,7 @@
   <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
     <div class="modal-header">
       <h3>Ficha del paciente</h3>
-      <button class="modal-close" onclick="closeModal('modal-ficha')">?</button>
+      <button class="modal-close" onclick="closeModal('modal-ficha')">✕</button>
     </div>
     <div id="ficha-content"></div>
     <div class="modal-actions">
@@ -908,8 +908,8 @@
 <div class="modal-overlay" id="modal-informe">
   <div class="modal" style="width:680px;max-height:90vh;overflow-y:auto">
     <div class="modal-header">
-      <h3>Informe de rehabilitaciÃ³n</h3>
-      <button class="modal-close" onclick="closeModal('modal-informe')">?</button>
+      <h3>Informe de rehabilitación</h3>
+      <button class="modal-close" onclick="closeModal('modal-informe')">✕</button>
     </div>
     <div id="informe-content"></div>
     <div class="modal-actions">
