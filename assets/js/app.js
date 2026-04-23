@@ -1449,8 +1449,9 @@ function generarInformePacienteTexto(p) {
   const restantes = p.sesionesAuth != null ? Math.max(p.sesionesAuth - p.sesiones, 0) : 'Sin tope';
 
   return [
-    'INFORME DE PLAN DE REHABILITACION Y PROGRESION',
+    'INFORME DE PLAN DE REHABILITACIÓN Y PROGRESIÓN',
     '',
+    'DATOS DEL PACIENTE',
     `Paciente: ${p.nombre}`,
     `Edad: ${p.edad || 'No informada'}`,
     `Profesional: ${p.prof || 'No asignado'}`,
@@ -1458,19 +1459,22 @@ function generarInformePacienteTexto(p) {
     `Etapa actual: ${p.etapaActual || deducirEtapaPaciente(p)}`,
     `Cobertura: ${obraSocial ? obraSocial.nombre : 'Particular'}`,
     '',
+    'EVALUACIÓN CLÍNICA',
     `Motivo de consulta: ${p.motivo || 'Sin dato'}`,
-    `Lesion / diagnostico: ${p.lesion || 'Sin dato'}`,
+    `Lesión / diagnóstico: ${p.lesion || 'Sin dato'}`,
     `Antecedentes: ${p.antecedentes || 'Sin antecedentes cargados.'}`,
-    `Evaluacion inicial: ${p.evaluacion || 'Sin evaluacion cargada.'}`,
+    `Evaluación inicial: ${p.evaluacion || 'Sin evaluación cargada.'}`,
     '',
+    'PLAN DE REHABILITACIÓN',
     `Objetivo principal: ${p.objetivo || 'Sin objetivo definido.'}`,
-    `Plan de rehabilitacion: ${p.planRehab || 'Sin plan cargado.'}`,
-    `Progresion observada / prevista: ${p.progresion || 'Sin progresion registrada.'}`,
+    `Plan de rehabilitación: ${p.planRehab || 'Sin plan cargado.'}`,
+    `Progresión observada / prevista: ${p.progresion || 'Sin progresión registrada.'}`,
     `Observaciones: ${p.observaciones || 'Sin observaciones.'}`,
     '',
+    'SEGUIMIENTO',
     `Sesiones realizadas: ${p.sesiones}`,
     `Sesiones restantes: ${restantes}${p.sesionesAuth != null ? ` de ${p.sesionesAuth}` : ''}`,
-    `Ultimo turno: ${ultimoTurno ? `${ultimoTurno.fecha} ${ultimoTurno.hora}` : 'Sin turnos registrados'}`,
+    `Último turno: ${ultimoTurno ? `${ultimoTurno.fecha} ${ultimoTurno.hora}` : 'Sin turnos registrados'}`,
     '',
     'Este informe fue generado desde KineApp.'
   ].join('\n');
@@ -1486,6 +1490,9 @@ function abrirInformePaciente(id) {
       <div class="report-chip">${paciente.nombre}</div>
       <div class="report-chip">${paciente.servicio}</div>
       <div class="report-chip">${paciente.etapaActual || deducirEtapaPaciente(paciente)}</div>
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);margin:12px 0 16px">
+      Informe listo para compartir por WhatsApp o mail con el plan de rehabilitación y la progresión actual del paciente.
     </div>
     <div class="report-preview">${escapeHtml(informe)}</div>
   `;
@@ -1522,16 +1529,20 @@ function compartirInformeWhatsApp(id) {
   }
 
   const telefono = paciente.tel.replace(/\D/g, '');
-  const texto = encodeURIComponent(generarInformePacienteTexto(paciente));
+  const texto = encodeURIComponent(`Hola, compartimos el informe de plan de rehabilitación y progresión.\n\n${generarInformePacienteTexto(paciente)}`);
   window.open(`https://wa.me/${telefono}?text=${texto}`, '_blank');
 }
 
 function compartirInformeMail(id) {
   const paciente = obtenerPacienteInforme(id);
   if(!paciente) return;
+  if(!paciente.email) {
+    alert('Este paciente no tiene email cargado.');
+    return;
+  }
 
-  const asunto = encodeURIComponent(`Informe de rehabilitación - ${paciente.nombre}`);
-  const cuerpo = encodeURIComponent(generarInformePacienteTexto(paciente));
+  const asunto = encodeURIComponent(`Informe de plan de rehabilitación y progresión - ${paciente.nombre}`);
+  const cuerpo = encodeURIComponent(`Hola,\n\nCompartimos el informe actualizado del paciente.\n\n${generarInformePacienteTexto(paciente)}`);
   const destinatario = encodeURIComponent(paciente.email || '');
   window.location.href = `mailto:${destinatario}?subject=${asunto}&body=${cuerpo}`;
 }
@@ -1615,9 +1626,9 @@ function verPaciente(id) {
       </div>
     </div>
     <div class="ficha-actions">
-      <button class="btn btn-primary" onclick="abrirInformePaciente(${p.id})">Ver informe</button>
-      <button class="btn btn-success" onclick="compartirInformeWhatsApp(${p.id})">WhatsApp</button>
-      <button class="btn btn-secondary" onclick="compartirInformeMail(${p.id})">Mail</button>
+      <button class="btn btn-primary" onclick="abrirInformePaciente(${p.id})">Ver informe de progreso</button>
+      <button class="btn btn-success" onclick="compartirInformeWhatsApp(${p.id})">Enviar por WhatsApp</button>
+      <button class="btn btn-secondary" onclick="compartirInformeMail(${p.id})">Enviar por mail</button>
     </div>
     <div class="detail-section">
       <div class="detail-section-title">Ficha clínica individual</div>
