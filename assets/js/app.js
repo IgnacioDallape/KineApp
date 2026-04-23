@@ -1,4 +1,4 @@
-// ===== ESTADO GLOBAL =====
+﻿// ===== ESTADO GLOBAL =====
 let state = {
   currentPage: 'dashboard',
   currentWeekOffset: 0,
@@ -20,11 +20,11 @@ let state = {
     { id:5, fecha:'2025-06-12', paciente:'Ana Torres', concepto:'Por sesión', monto:3500, estado:'Pagado' },
   ],
   servicios: [
-    { nombre:'Rehabilitación', desc:'Tratamiento kinesiológico de lesiones', icono:'??', color:'blue' },
-    { nombre:'Readaptación', desc:'Vuelta al deporte post-lesión', icono:'??', color:'teal' },
-    { nombre:'Entrenamiento funcional', desc:'Acondicionamiento físico especializado', icono:'??', color:'green' },
-    { nombre:'Pilates', desc:'Pilates clínico y terapéutico', icono:'??', color:'purple' },
-    { nombre:'Recovery', desc:'Presoterapia, crioterapia y más', icono:'??', color:'orange' },
+    { nombre:'Rehabilitación', desc:'Tratamiento kinesiológico de lesiones', icono:'🦴', color:'blue' },
+    { nombre:'Readaptación', desc:'Vuelta al deporte post-lesión', icono:'🏃', color:'teal' },
+    { nombre:'Entrenamiento funcional', desc:'Acondicionamiento físico especializado', icono:'💪', color:'green' },
+    { nombre:'Pilates', desc:'Pilates clínico y terapéutico', icono:'🧘', color:'purple' },
+    { nombre:'Recovery', desc:'Presoterapia, crioterapia y más', icono:'❄️', color:'orange' },
   ],
   tarifas: [
     { id:1, servicio:'Rehabilitación', concepto:'Sesión individual', monto:5000 },
@@ -368,7 +368,7 @@ function mostrarTurno(id) {
         <div style="font-size:14px;font-weight:500">${asistLabel}</div>
       </div>
     </div>
-    ${t.notas ? `<div style="background:var(--primary-light);border-radius:8px;padding:10px;font-size:13px;color:var(--primary)">?? ${t.notas}</div>` : ''}
+    ${t.notas ? `<div style="background:var(--primary-light);border-radius:8px;padding:10px;font-size:13px;color:var(--primary)">📝 ${t.notas}</div>` : ''}
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
       <button class="btn btn-sm btn-success" onclick="marcarTurnoAsist(${t.id},'asistio')">? Asistió</button>
       <button class="btn btn-sm btn-danger" onclick="marcarTurnoAsist(${t.id},'ausente')">? Ausente</button>
@@ -465,10 +465,10 @@ function renderPacientes(filtro='', servFiltro='') {
               </div>
             </div>
             <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">
-              ?? ${p.lesion || '—'} &nbsp;·&nbsp; ?? ${p.prof}
+              🩺 ${p.lesion || '—'} &nbsp;·&nbsp; 👨 ${p.prof}
             </div>
             <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">
-              ?? ${p.tel || '—'}
+              ☎️ ${p.tel || '—'}
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between">
               <span class="badge ${p.deuda>0?'badge-red':'badge-green'}">${p.deuda>0?'Debe $'+p.deuda.toLocaleString('es-AR'):'Al día'}</span>
@@ -548,7 +548,7 @@ function verPaciente(id) {
         const os = state.obrasSociales.find(x => x.id === p.obraSocialId);
         if(os) return `
           <div style="background:var(--primary-light);border:1px solid var(--primary-soft);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:8px">?? ${os.nombre}</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:8px">🏥 ${os.nombre}</div>
             <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
               <div><span style="color:var(--text-muted)">Cobertura:</span> <strong>${os.cobertura}</strong></div>
               <div><span style="color:var(--text-muted)">Reconoce x sesión:</span> <strong style="color:var(--green)">$${(os.montoPorSesion||0).toLocaleString('es-AR')}</strong></div>
@@ -556,7 +556,7 @@ function verPaciente(id) {
             </div>
           </div>`;
       }
-      return `<div style="background:var(--bg);border-radius:var(--radius-sm);padding:8px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted)">?? Paciente particular</div>`;
+      return `<div style="background:var(--bg);border-radius:var(--radius-sm);padding:8px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted)">💳 Paciente particular</div>`;
     })()}
     <div style="display:flex;gap:12px;margin-bottom:20px">
       <div style="flex:1;text-align:center;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px">
@@ -583,11 +583,11 @@ function verPaciente(id) {
     </div>
     ${p.fotoMedico ? `
       <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px">?? Pedido médico</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px">📄 Pedido médico</div>
         <div style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg);padding:10px;text-align:center">
           ${p.fotoMedico.src && p.fotoMedico.src.startsWith('data:image')
             ? `<img src="${p.fotoMedico.src}" style="max-width:100%;max-height:200px;border-radius:6px;cursor:pointer" onclick="window.open(this.src)">`
-            : `<div style="font-size:13px;color:var(--text-muted)">?? ${p.fotoMedico.nombre}</div>`}
+            : `<div style="font-size:13px;color:var(--text-muted)">📄 ${p.fotoMedico.nombre}</div>`}
         </div>
       </div>` : ''}
     <div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px">Historial de turnos</div>
@@ -704,7 +704,7 @@ function setFiltroGastos(btn, filtro) {
   renderPagos();
 }
 
-const categoriaIcono = { Sueldos:'??', Infraestructura:'??', Servicios:'??', Insumos:'??', Impuestos:'??', Otros:'??' };
+const categoriaIcono = { Sueldos:'💼', Infraestructura:'🏢', Servicios:'💡', Insumos:'📦', Impuestos:'🧾', Otros:'📌' };
 const categoriaColor = { Sueldos:'purple', Infraestructura:'blue', Servicios:'teal', Insumos:'orange', Impuestos:'red', Otros:'gray' };
 
 function renderPagos() {
@@ -826,7 +826,7 @@ function renderCobranzas() {
   const alertDiv = document.getElementById('alertas-deuda');
   alertDiv.innerHTML = deudores.map(p => `
     <div class="deuda-alert">
-      <span style="font-size:22px">??</span>
+      <span style="font-size:22px">📱</span>
       <div style="flex:1">
         <strong>${p.nombre}</strong> — deuda de <strong>$${p.deuda.toLocaleString('es-AR')}</strong>
         <span style="font-size:12px;color:var(--text-muted);margin-left:8px">${p.servicio}</span>
@@ -884,7 +884,7 @@ function renderCobranzas() {
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
           ${p.sesiones} sesiones realizadas
         </div>
-        <button class="btn btn-sm btn-primary" style="width:100%" onclick="abrirCobro(${p.id})">?? Cobrar</button>
+        <button class="btn btn-sm btn-primary" style="width:100%" onclick="abrirCobro(${p.id})">💸 Cobrar</button>
       </div>
     `).join('');
   }
@@ -929,7 +929,7 @@ function renderRecordatorios() {
           <div style="font-size:13px;font-weight:500">${t.paciente}</div>
           <div style="font-size:11px;color:var(--text-muted)">Mañana ${t.hora} · Se enviará en ~2 hs</div>
         </div>
-        <span style="font-size:16px">??</span>
+        <span style="font-size:16px">📱</span>
       </div>
     `).join('');
   }
@@ -1155,7 +1155,7 @@ function switchTab(section, tab) {
 function populatePacienteSelects() {
   const turnoOpts = '<option value="">— Seleccionar —</option>' + state.pacientes.map(p => {
     const agotado = p.sesionesAuth != null && state.turnos.filter(t => t.paciente === p.nombre).length >= p.sesionesAuth;
-    return `<option value="${p.id}" ${agotado ? 'style="color:var(--red)"' : ''}>${p.nombre}${agotado ? ' ?? sin sesiones' : ''}</option>`;
+    return `<option value="${p.id}" ${agotado ? 'style="color:var(--red)"' : ''}>${p.nombre}${agotado ? ' 🚫 sin sesiones' : ''}</option>`;
   }).join('');
   document.getElementById('turno-paciente').innerHTML = turnoOpts;
   document.getElementById('pago-paciente').innerHTML = state.pacientes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
@@ -1230,7 +1230,7 @@ function guardarTurno() {
       return;
     }
     if(restantes === 1) {
-      if(!confirm(`?? ${pacObj.nombre} tiene solo 1 turno disponible de ${pacObj.sesionesAuth} autorizados.\n¿Querés agendar igual?`)) return;
+      if(!confirm(`⚠️ ${pacObj.nombre} tiene solo 1 turno disponible de ${pacObj.sesionesAuth} autorizados.\n¿Querés agendar igual?`)) return;
     }
   }
 
@@ -1274,7 +1274,7 @@ function previewFotoMedico(input) {
     reader.readAsDataURL(file);
   } else {
     document.getElementById('pac-foto-img').src = '';
-    document.getElementById('pac-foto-nombre').textContent = '?? ' + file.name;
+    document.getElementById('pac-foto-nombre').textContent = '📄 ' + file.name;
     document.getElementById('pac-foto-preview').style.display = 'block';
     document.getElementById('pac-foto-drop').style.display = 'none';
   }
@@ -1688,8 +1688,8 @@ function servicioColor(serv) {
   return m[serv] || 'gray';
 }
 function servicioEmoji(serv) {
-  const m = { 'Rehabilitación':'??','Readaptación':'??','Pilates':'??','Recovery':'??','Entrenamiento funcional':'??' };
-  return m[serv] || '??';
+  const m = { 'Rehabilitación':'🦴','Readaptación':'🏃','Pilates':'🧘','Recovery':'❄️','Entrenamiento funcional':'💪' };
+  return m[serv] || '📋';
 }
 
 // ===== INIT =====
@@ -1702,3 +1702,8 @@ window.addEventListener('resize', () => {
   if(state.currentPage === 'pacientes') renderPacientes();
   if(state.currentPage === 'cobranzas') renderCobranzas();
 });
+
+
+
+
+
