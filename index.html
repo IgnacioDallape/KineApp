@@ -29,20 +29,24 @@
     <div class="nav-item" onclick="navigate('asistencia')">
       <span class="icon">&#9989;</span><span>Asistencia</span>
     </div>
-    <div class="nav-item" onclick="navigate('pagos')">
-      <span class="icon">&#128184;</span><span>Gastos</span>
-    </div>
-    <div class="nav-item" onclick="navigate('cobranzas')">
-      <span class="icon">&#128176;</span><span>Cobranzas</span>
-    </div>
     <div class="nav-item" onclick="navigate('recordatorios')">
       <span class="icon">&#128276;</span><span>Recordatorios</span>
     </div>
     <div class="nav-item" onclick="navigate('servicios')">
       <span class="icon">&#9881;&#65039;</span><span>Servicios</span>
     </div>
+    <div class="nav-section" id="nav-admin-section">Administración</div>
+    <div class="nav-item" id="nav-pagos" onclick="navigate('pagos')">
+      <span class="icon">&#128184;</span><span>Gastos</span>
+    </div>
+    <div class="nav-item" id="nav-cobranzas" onclick="navigate('cobranzas')">
+      <span class="icon">&#128176;</span><span>Cobranzas</span>
+    </div>
   </nav>
-  <div class="sidebar-footer">v1.0 · 2025</div>
+  <div class="sidebar-footer">
+    <div id="conn-status" class="conn-status"><span class="conn-dot local"></span> Iniciando…</div>
+    <div style="margin-top:6px;opacity:.7">v2.0 · 2026</div>
+  </div>
 </aside>
 
 <!-- MAIN -->
@@ -97,11 +101,8 @@
     <div class="page-header">
       <div><h2>Agenda</h2><p>Vista semanal por profesional</p></div>
       <div style="display:flex;gap:8px">
-        <select class="form-control" id="agenda-prof" style="width:160px">
-          <option>Todos</option>
-          <option>Lic. García</option>
-          <option>Lic. Romero</option>
-          <option>Lic. Paz</option>
+        <select class="form-control" id="agenda-prof" style="width:170px" onchange="setFiltroProf(this.value)">
+          <option value="">Todos los profesionales</option>
         </select>
         <button class="btn btn-primary" onclick="openModal('modal-turno')">+ Turno</button>
       </div>
@@ -113,14 +114,7 @@
           <span class="week-date" id="week-label">Semana actual</span>
           <button onclick="changeWeek(1)">›</button>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          <button class="filtro-act active" data-serv="" onclick="setFiltroActividad(this,'')">Todos</button>
-          <button class="filtro-act" data-serv="rehab" onclick="setFiltroActividad(this,'rehab')" style="--fc:var(--primary)">&#129460; Rehabilitación</button>
-          <button class="filtro-act" data-serv="gym" onclick="setFiltroActividad(this,'gym')" style="--fc:var(--teal)">&#127939; Readaptación</button>
-          <button class="filtro-act" data-serv="recovery" onclick="setFiltroActividad(this,'recovery')" style="--fc:var(--purple)">&#10052;&#65039; Recovery</button>
-          <button class="filtro-act" data-serv="pilates" onclick="setFiltroActividad(this,'pilates')" style="--fc:var(--orange)">🧘 Pilates</button>
-          <button class="filtro-act" data-serv="funcional" onclick="setFiltroActividad(this,'funcional')" style="--fc:var(--green)">💪 Funcional</button>
-        </div>
+        <div id="agenda-filtros-serv" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
       </div>
       <div style="padding:16px;overflow-x:auto">
         <div class="agenda-grid" id="agenda-grid"></div>
@@ -132,14 +126,17 @@
   <div class="page" id="page-pacientes">
     <div class="page-header">
       <div><h2>Pacientes</h2><p>Fichas y historial de sesiones</p></div>
-      <button class="btn btn-primary" onclick="openModal('modal-paciente')">+ Nuevo paciente</button>
+      <button class="btn btn-primary" onclick="nuevoPaciente()">+ Nuevo paciente</button>
     </div>
     <div class="card" style="margin-bottom:16px">
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <div class="search-wrap" style="flex:1;min-width:200px">
           <span class="search-icon">&#128269;</span>
-          <input class="form-control" placeholder="Buscar por nombre o lesión..." oninput="filtrarPacientes(this.value)">
+          <input class="form-control" placeholder="Buscar" oninput="filtrarPacientes(this.value)">
         </div>
+        <select class="form-control" id="pac-filtro-prof" style="width:170px" onchange="filtrarPorProf(this.value)">
+          <option value="">Todos los profesionales</option>
+        </select>
         <select class="form-control" style="width:160px" onchange="filtrarPorServicio(this.value)">
           <option value="">Todos los servicios</option>
           <option>Rehabilitación</option>
@@ -160,6 +157,7 @@
         </table>
       </div>
       <div id="pacientes-cards-mobile"></div>
+      <div id="pac-pagination" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-top:1px solid var(--border)"></div>
     </div>
   </div>
 
@@ -389,7 +387,7 @@
 
 <!-- MAS MENU (mobile) -->
 <div id="mas-menu" style="display:none;position:fixed;bottom:70px;right:12px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:300;overflow:hidden;min-width:180px">
-  <div onclick="navigate('cobranzas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128176; Cobranzas</div>
+  <div id="mas-cobranzas" onclick="navigate('cobranzas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128176; Cobranzas</div>
   <div onclick="navigate('recordatorios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128276; Recordatorios</div>
   <div onclick="navigate('servicios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500">&#9881;&#65039; Servicios</div>
 </div>
@@ -403,9 +401,12 @@
     </div>
     <div class="form-group">
       <label>Paciente</label>
-      <select class="form-control" id="turno-paciente">
-        <option>— Seleccionar —</option>
-      </select>
+      <div style="display:flex;gap:8px">
+        <select class="form-control" id="turno-paciente" style="flex:1">
+          <option>— Seleccionar —</option>
+        </select>
+        <button type="button" class="btn btn-secondary" style="white-space:nowrap" onclick="nuevoPacienteDesdeTurno()">+ Paciente</button>
+      </div>
     </div>
     <div class="grid-2">
       <div class="form-group">
@@ -459,153 +460,129 @@
 <div class="modal-overlay" id="modal-paciente">
   <div class="modal">
     <div class="modal-header">
-      <h3>Nuevo paciente</h3>
+      <h3 id="modal-paciente-title">Nuevo paciente</h3>
       <button class="modal-close" onclick="closeModal('modal-paciente')">✕</button>
     </div>
+    <!-- 1 · DATOS (los carga la secretaría) -->
+    <div class="form-section-title">1 · Datos del paciente</div>
     <div class="grid-2">
-      <div class="form-group">
-        <label>Nombre completo</label>
-        <input class="form-control" id="pac-nombre" placeholder="Juan Pérez">
-      </div>
-      <div class="form-group">
-        <label>Teléfono</label>
-        <input class="form-control" id="pac-tel" placeholder="261 123 4567" type="tel">
-      </div>
+      <div class="form-group"><label>Nombre completo</label><input class="form-control" id="pac-nombre" placeholder="Juan Pérez"></div>
+      <div class="form-group"><label>DNI</label><input class="form-control" id="pac-dni" placeholder="Ej: 30123456" inputmode="numeric"></div>
     </div>
     <div class="grid-2">
-      <div class="form-group">
-        <label>Email</label>
-        <input class="form-control" id="pac-email" placeholder="paciente@mail.com" type="email">
-      </div>
-      <div class="form-group">
-        <label>Edad</label>
-        <input class="form-control" id="pac-edad" placeholder="Ej: 34" type="number" min="0">
-      </div>
+      <div class="form-group"><label>Teléfono</label><input class="form-control" id="pac-tel" placeholder="261 123 4567" type="tel"></div>
+      <div class="form-group"><label>Email</label><input class="form-control" id="pac-email" placeholder="paciente@mail.com" type="email"></div>
     </div>
     <div class="grid-2">
-      <div class="form-group">
-        <label>Deporte / Actividad</label>
-        <input class="form-control" id="pac-deporte" placeholder="Fútbol, running...">
-      </div>
-      <div class="form-group">
-        <label>Servicio</label>
+      <div class="form-group"><label>Edad</label><input class="form-control" id="pac-edad" placeholder="Ej: 34" type="number" min="0"></div>
+      <div class="form-group"><label>Deporte / Actividad</label><input class="form-control" id="pac-deporte" placeholder="Fútbol, running..."></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Servicio</label>
         <select class="form-control" id="pac-servicio">
-          <option>Rehabilitación</option>
-          <option>Readaptación</option>
-          <option>Pilates</option>
-          <option>Recovery</option>
-          <option>Entrenamiento funcional</option>
+          <option>Rehabilitación</option><option>Readaptación</option><option>Pilates</option><option>Recovery</option><option>Entrenamiento funcional</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Profesional asignado</label>
+        <select class="form-control" id="pac-prof">
+          <option>Lic. García</option><option>Lic. Romero</option><option>Lic. Paz</option>
         </select>
       </div>
     </div>
+    <div class="form-group"><label>Motivo de consulta</label><input class="form-control" id="pac-motivo" placeholder="¿Por qué consulta?"></div>
+
+    <!-- 2 · COBERTURA Y PAGO -->
+    <div class="form-section-title">2 · Cobertura y pago</div>
     <div class="form-group">
-      <label>Motivo de consulta</label>
-      <input class="form-control" id="pac-motivo" placeholder="¿Por qué consulta?">
-    </div>
-    <div class="form-group">
-      <label>Lesión / Diagnóstico</label>
-      <input class="form-control" id="pac-lesion" placeholder="Esguince, lumbalgia...">
-    </div>
-    <div class="form-group">
-      <label>Antecedentes relevantes</label>
-      <textarea class="form-control" id="pac-antecedentes" rows="3" placeholder="Cirugías, recaídas, antecedentes clínicos..."></textarea>
-    </div>
-    <div class="form-group">
-      <label>Evaluación inicial</label>
-      <textarea class="form-control" id="pac-evaluacion" rows="3" placeholder="Dolor, movilidad, fuerza, pruebas funcionales..."></textarea>
-    </div>
-    <div class="grid-2">
-      <div class="form-group">
-        <label>Objetivo principal</label>
-        <input class="form-control" id="pac-objetivo" placeholder="Volver a correr sin dolor">
-      </div>
-      <div class="form-group">
-        <label>Etapa actual</label>
-        <select class="form-control" id="pac-etapa">
-          <option>Evaluación inicial</option>
-          <option>Control del dolor</option>
-          <option>Movilidad y activación</option>
-          <option>Fortalecimiento</option>
-          <option>Readaptación funcional</option>
-          <option>Retorno al deporte</option>
-          <option>Alta</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Plan de rehabilitación</label>
-      <textarea class="form-control" id="pac-plan" rows="3" placeholder="Frecuencia, ejercicios, objetivos de corto plazo..."></textarea>
-    </div>
-    <div class="form-group">
-      <label>Progresión prevista / actual</label>
-      <textarea class="form-control" id="pac-progresion" rows="3" placeholder="Criterios de avance, respuesta al tratamiento, hitos alcanzados..."></textarea>
-    </div>
-    <div class="form-group">
-      <label>Observaciones</label>
-      <textarea class="form-control" id="pac-observaciones" rows="3" placeholder="Indicaciones para el paciente, alertas, seguimiento..."></textarea>
-    </div>
-    <div class="form-group">
-      <label>Profesional asignado</label>
-      <select class="form-control" id="pac-prof">
-        <option>Lic. García</option>
-        <option>Lic. Romero</option>
-        <option>Lic. Paz</option>
+      <label>Tipo de cobertura</label>
+      <select class="form-control" id="pac-cobertura" onchange="onCoberturaChange()">
+        <option value="particular">Particular</option>
+        <option value="obra_social">Obra social</option>
       </select>
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
-      <div class="form-group">
-        <label>Tipo de cobertura</label>
-        <select class="form-control" id="pac-cobertura" onchange="onCoberturaChange()">
-          <option value="particular">Particular</option>
-          <option value="obra_social">Obra social</option>
+    <div id="pac-os-section" style="display:none">
+      <div class="form-group"><label>Obra social</label>
+        <select class="form-control" id="pac-os-select" onchange="onObrasSocialChange()"><option value="">— Seleccionar —</option></select>
+      </div>
+      <div id="pac-os-info" style="display:none;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px;font-size:13px;margin-bottom:12px">
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div><span style="color:var(--text-muted)">Reconoce por sesión:</span> <strong id="pac-os-monto" style="color:var(--green)"></strong></div>
+          <div><span style="color:var(--text-muted)">Adicional x10 sesiones:</span> <strong id="pac-os-adicional" style="color:var(--primary)"></strong></div>
+          <div><span style="color:var(--text-muted)">Cobertura:</span> <strong id="pac-os-cobertura"></strong></div>
+        </div>
+      </div>
+    </div>
+    <p id="pac-particular-hint" style="font-size:12px;color:var(--text-muted);margin:-6px 0 12px">Paciente particular: ingresá en “Total a pagar” cuánto tiene que abonar.</p>
+    <div class="grid-2">
+      <div class="form-group"><label>Sesiones</label><input type="number" class="form-control" id="pac-sesiones-auth" placeholder="Ej: 10" min="0"></div>
+      <div class="form-group"><label>Total a pagar <span class="unit">$</span></label><input type="number" class="form-control" id="pac-total-pagar" placeholder="0" min="0"></div>
+    </div>
+    <div class="form-group">
+      <label>Pedido médico <span style="color:var(--text-muted);font-weight:400">(foto o PDF, opcional)</span></label>
+      <div id="pac-foto-drop" onclick="document.getElementById('pac-foto-input').click()"
+        style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg)">
+        <div style="font-size:28px">&#128196;</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:6px">Tocá para subir o sacar foto</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">JPG, PNG, PDF</div>
+      </div>
+      <input type="file" id="pac-foto-input" accept="image/*,application/pdf" style="display:none" onchange="previewFotoMedico(this)">
+      <div id="pac-foto-preview" style="display:none;margin-top:10px;text-align:center">
+        <img id="pac-foto-img" style="max-width:100%;max-height:160px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="pac-foto-nombre"></div>
+        <button onclick="limpiarFotoMedico()" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;margin-top:2px">✕ Quitar</button>
+      </div>
+    </div>
+
+    <!-- 3 · FICHA CLÍNICA -->
+    <div class="form-section-title">3 · Ficha clínica y evaluación</div>
+    <div class="form-group"><label>Lesión / Diagnóstico</label><input class="form-control" id="pac-lesion" placeholder="Esguince, lumbalgia..."></div>
+    <div class="form-group"><label>Antecedentes relevantes</label><textarea class="form-control" id="pac-antecedentes" rows="3" placeholder="Cirugías, recaídas, antecedentes clínicos..."></textarea></div>
+    <div class="form-group"><label>Evaluación inicial</label><textarea class="form-control" id="pac-evaluacion" rows="3" placeholder="Dolor, movilidad, fuerza, pruebas funcionales..."></textarea></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Objetivo principal</label><input class="form-control" id="pac-objetivo" placeholder="Volver a correr sin dolor"></div>
+      <div class="form-group"><label>Etapa actual</label>
+        <select class="form-control" id="pac-etapa">
+          <option>Evaluación inicial</option><option>Control del dolor</option><option>Movilidad y activación</option><option>Fortalecimiento</option><option>Readaptación funcional</option><option>Retorno al deporte</option><option>Alta</option>
         </select>
       </div>
-      <div id="pac-os-section" style="display:none">
-        <div class="form-group">
-          <label>Obra social</label>
-          <select class="form-control" id="pac-os-select" onchange="onObrasSocialChange()">
-            <option value="">— Seleccionar —</option>
-          </select>
-        </div>
-        <div id="pac-os-info" style="display:none;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px;font-size:13px;margin-bottom:12px">
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            <div><span style="color:var(--text-muted)">Reconoce por sesión:</span> <strong id="pac-os-monto" style="color:var(--green)"></strong></div>
-            <div><span style="color:var(--text-muted)">Adicional x10 sesiones:</span> <strong id="pac-os-adicional" style="color:var(--primary)"></strong></div>
-            <div><span style="color:var(--text-muted)">Cobertura:</span> <strong id="pac-os-cobertura"></strong></div>
-          </div>
-        </div>
-      </div>
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
-      <div class="grid-2">
-        <div class="form-group">
-          <label>Sesiones autorizadas</label>
-          <input type="number" class="form-control" id="pac-sesiones-auth" placeholder="Ej: 10" min="0">
-        </div>
-        <div class="form-group">
-          <label>Sesiones realizadas</label>
-          <input type="number" class="form-control" id="pac-sesiones-real" placeholder="0" min="0" value="0">
-        </div>
-      </div>
-      <div class="form-group">
-      <label>Pedido médico <span style="color:var(--text-muted);font-weight:400">(foto, opcional)</span></label>
-        <div id="pac-foto-drop" onclick="document.getElementById('pac-foto-input').click()"
-          style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg)">
-          <div style="font-size:28px">&#128196;</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">Tocá para subir o sacar foto</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">JPG, PNG, PDF</div>
-        </div>
-        <input type="file" id="pac-foto-input" accept="image/*,application/pdf" style="display:none" onchange="previewFotoMedico(this)">
-        <div id="pac-foto-preview" style="display:none;margin-top:10px;text-align:center">
-          <img id="pac-foto-img" style="max-width:100%;max-height:160px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="pac-foto-nombre"></div>
-          <button onclick="limpiarFotoMedico()" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;margin-top:2px">✕ Quitar</button>
-        </div>
-      </div>
+    <div class="form-group"><label>Plan de rehabilitación</label><textarea class="form-control" id="pac-plan" rows="3" placeholder="Frecuencia, ejercicios, objetivos de corto plazo..."></textarea></div>
+    <div class="form-group"><label>Progresión prevista / actual</label><textarea class="form-control" id="pac-progresion" rows="3" placeholder="Criterios de avance, respuesta al tratamiento, hitos alcanzados..."></textarea></div>
+    <div class="form-group"><label>Observaciones</label><textarea class="form-control" id="pac-observaciones" rows="3" placeholder="Indicaciones para el paciente, alertas, seguimiento..."></textarea></div>
+
+    <!-- 4 · EVALUACIÓN FÍSICA / KINESIOLÓGICA (la completa el kinesiólogo) -->
+    <div class="form-section-title">4 · Evaluación física y kinesiológica</div>
+    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Intensidad del dolor (0 a 10)</label>
+    <div class="grid-3">
+      <div class="form-group"><label>Reposo <span class="unit">/10</span></label><input type="number" class="form-control" id="pac-dolor-reposo" min="0" max="10" placeholder="0"></div>
+      <div class="form-group"><label>Movimiento <span class="unit">/10</span></label><input type="number" class="form-control" id="pac-dolor-mov" min="0" max="10" placeholder="0"></div>
+      <div class="form-group"><label>Actividad deportiva <span class="unit">/10</span></label><input type="number" class="form-control" id="pac-dolor-dep" min="0" max="10" placeholder="0"></div>
     </div>
+    <div class="grid-3">
+      <div class="form-group"><label>¿Inflamación?</label><select class="form-control" id="pac-inflamacion"><option value="">—</option><option>Sí</option><option>No</option></select></div>
+      <div class="form-group"><label>¿Hematoma / moretón?</label><select class="form-control" id="pac-hematoma"><option value="">—</option><option>Sí</option><option>No</option></select></div>
+      <div class="form-group"><label>¿Inestabilidad?</label><select class="form-control" id="pac-inestabilidad"><option value="">—</option><option>Sí</option><option>No</option></select></div>
+    </div>
+    <div class="form-group"><label>Rango de movilidad articular (grados)</label><textarea class="form-control" id="pac-rango-movilidad" rows="2" placeholder="Ej: flexión 90°, extensión -10°..."></textarea></div>
+    <div class="form-group"><label>Mecanismo lesional <span style="color:var(--text-muted);font-weight:400">(lo completa el kinesiólogo)</span></label><textarea class="form-control" id="pac-mecanismo" rows="2" placeholder="Cómo se produjo la lesión..."></textarea></div>
+    <div class="form-group"><label>Antecedentes deportivos y lesiones previas</label><textarea class="form-control" id="pac-antec-deportivos" rows="2" placeholder="Deportes, lesiones anteriores, cirugías deportivas..."></textarea></div>
+
+    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin:8px 0 8px;text-transform:uppercase;letter-spacing:.04em">Observación kinesiológica</label>
+    <div class="check-grid">
+      <label class="chk-item"><input type="checkbox" id="pac-ok-marcha"> Marcha alterada</label>
+      <label class="chk-item"><input type="checkbox" id="pac-ok-postura"> Postura alterada</label>
+      <label class="chk-item"><input type="checkbox" id="pac-ok-asimetrias"> Asimetrías visibles</label>
+      <label class="chk-item"><input type="checkbox" id="pac-ok-inflamacion"> Inflamación visible</label>
+      <label class="chk-item"><input type="checkbox" id="pac-ok-palpacion"> Dolor a la palpación</label>
+      <label class="chk-item"><input type="checkbox" id="pac-ok-limitacion"> Limitación de movilidad</label>
+      <label class="chk-item"><input type="checkbox" id="pac-ok-fuerza"> Déficit de fuerza</label>
+      <label class="chk-item"><input type="checkbox" id="pac-ok-equilibrio"> Déficit de equilibrio / propiocepción</label>
+      <label class="chk-item"><input type="checkbox" id="pac-ok-compensaciones"> Compensaciones durante el movimiento</label>
+    </div>
+    <div class="form-group" style="margin-top:12px"><label>Observaciones (kinesiológica)</label><textarea class="form-control" id="pac-ok-obs" rows="2" placeholder="Hallazgos del examen kinesiológico..."></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-paciente')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarPaciente()">Guardar paciente</button>
+      <button class="btn btn-primary" id="btn-guardar-paciente" onclick="guardarPaciente()">Guardar paciente</button>
     </div>
   </div>
 </div>
@@ -842,11 +819,11 @@
     <div class="form-group">
       <label>Concepto</label>
       <select class="form-control" id="cobro-tipo" onchange="onCobroTipoChange()">
+        <option>Saldar deuda</option>
         <option>Por sesión</option>
         <option>Pack 5 sesiones</option>
         <option>Pack 10 sesiones</option>
         <option>Pack mensual</option>
-        <option>Salda deuda</option>
       </select>
     </div>
     <div class="grid-2">
@@ -913,13 +890,42 @@
     </div>
     <div id="informe-content"></div>
     <div class="modal-actions">
+      <button class="btn btn-primary" onclick="descargarInformePDF()">📄 Descargar PDF</button>
       <button class="btn btn-secondary" onclick="copiarInformePaciente()">Copiar texto</button>
-      <button class="btn btn-success" onclick="compartirInformeWhatsApp()">Enviar por WhatsApp</button>
-      <button class="btn btn-primary" onclick="compartirInformeMail()">Enviar por mail</button>
+      <button class="btn btn-success" onclick="compartirInformeWhatsApp()">WhatsApp</button>
+      <button class="btn btn-secondary" onclick="compartirInformeMail()">Mail</button>
     </div>
   </div>
 </div>
 
+<!-- LOGIN (solo modo cloud) -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>KineApp</h1>
+      <p>Centro Kinesiológico</p>
+    </div>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input class="form-control" id="login-user" type="text" placeholder="usuario" autocomplete="username"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input class="form-control" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="login-error" style="color:var(--red);font-size:13px;min-height:18px;margin-bottom:8px"></div>
+    <button class="btn btn-primary" id="login-btn" style="width:100%;justify-content:center" onclick="doLogin()">Ingresar</button>
+    <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:14px">Acceso del staff del centro.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/pdf.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>
