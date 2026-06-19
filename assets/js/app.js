@@ -967,15 +967,12 @@ function renderServicios() {
           </div>
           <button onclick="eliminarObraSocial('${os.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px">✕</button>
         </div>
-        <div style="display:flex;gap:0;border-top:1px solid var(--border)">
-          <div style="flex:1;padding:8px 14px;background:var(--green-light);text-align:center">
-            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--green);margin-bottom:2px">Cubre x sesión</div>
-            <div style="font-size:16px;font-weight:700;color:var(--green)">${ars((os.cubre && os.cubre['Por sesión']) || 0)}</div>
-          </div>
-          <div style="flex:1;padding:8px 14px;background:var(--primary-light);text-align:center;border-left:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--primary);margin-bottom:2px">Coseguro x sesión</div>
-            <div style="font-size:16px;font-weight:700;color:var(--primary)">${ars(coseguroPack(os, 'Por sesión'))}</div>
-          </div>
+        <div style="border-top:1px solid var(--border);padding:8px 14px;font-size:13px">
+          ${(() => {
+            const packs = packsConPrecio();
+            if (!packs.length) return '<span style="color:var(--text-muted)">Cargá las tarifas (arriba) para ver el coseguro.</span>';
+            return packs.map(p => `<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text-muted)">${p}</span><span>cubre ${ars(cubrePack(os, p))} · <strong style="color:var(--primary)">coseguro ${ars(coseguroPack(os, p))}</strong></span></div>`).join('');
+          })()}
         </div>
       </div>`).join('');
   }
@@ -1109,10 +1106,26 @@ function tarifaDePack(concepto, servicio) {
   if (servicio) { const m = matches.find(t => t.servicio === servicio); if (m) return m.monto || 0; }
   return matches[0]?.monto || 0;
 }
-// Coseguro de un pack = tarifa − lo que cubre la obra social.
+const PACK_SESIONES = { 'Por sesión': 1, 'Pack 5 sesiones': 5, 'Pack 10 sesiones': 10, 'Pack 15 sesiones': 15, 'Pack 20 sesiones': 20 };
+// Precio del pack: tarifa directa, o (tarifa por sesión × N) si no cargaron la del pack.
+function precioPack(concepto, servicio) {
+  const directo = tarifaDePack(concepto, servicio);
+  if (directo > 0) return directo;
+  return tarifaDePack('Por sesión', servicio) * (PACK_SESIONES[concepto] || 1);
+}
+// Lo que cubre la OS para el pack: monto directo, o (cubre por sesión × N).
+function cubrePack(os, concepto) {
+  const c = (os && os.cubre) || {};
+  if (c[concepto] > 0) return c[concepto];
+  return (c['Por sesión'] || 0) * (PACK_SESIONES[concepto] || 1);
+}
+// Coseguro de un pack = precio − lo que cubre la obra social.
 function coseguroPack(os, concepto, servicio) {
-  const cubre = (os && os.cubre && os.cubre[concepto]) || 0;
-  return Math.max(0, tarifaDePack(concepto, servicio) - cubre);
+  return Math.max(0, precioPack(concepto, servicio) - cubrePack(os, concepto));
+}
+// Packs que tienen precio (tarifa directa o derivada de "por sesión").
+function packsConPrecio(servicio) {
+  return PACKS.filter(p => precioPack(p, servicio) > 0);
 }
 function leerCubreOS() {
   const cubre = {};
@@ -1125,17 +1138,17 @@ function packDeSesiones(n) {
 
 // Preview en vivo: coseguro (tarifa − cubre) por cada pack que tenga tarifa cargada.
 function updateCoseguroPreview() {
-  const cubre = leerCubreOS();
+  const osTmp = { cubre: leerCubreOS() };
   const box = document.getElementById('os-coseguro-preview');
   const rowsEl = document.getElementById('os-coseguro-rows');
   if (!box || !rowsEl) return;
-  const conTarifa = PACKS.filter(p => tarifaDePack(p) > 0);
-  if (!conTarifa.length) {
+  const packs = packsConPrecio();
+  if (!packs.length) {
     rowsEl.innerHTML = '<span style="color:var(--text-muted)">Cargá primero las tarifas (Servicios → Tarifas) para que el coseguro se calcule solo.</span>';
   } else {
-    rowsEl.innerHTML = conTarifa.map(p => {
-      const t = tarifaDePack(p), c = cubre[p] || 0, cose = Math.max(0, t - c);
-      return `<div style="display:flex;justify-content:space-between;padding:2px 0"><span>${p}</span><span><strong>${ars(cose)}</strong> <span style="color:var(--text-muted)">(${ars(t)} − ${ars(c)})</span></span></div>`;
+    rowsEl.innerHTML = packs.map(p => {
+      const precio = precioPack(p), cubre = cubrePack(osTmp, p), cose = Math.max(0, precio - cubre);
+      return `<div style="display:flex;justify-content:space-between;padding:2px 0"><span>${p}</span><span><strong>${ars(cose)}</strong> <span style="color:var(--text-muted)">(${ars(precio)} − ${ars(cubre)})</span></span></div>`;
     }).join('');
   }
   box.style.display = 'block';
@@ -1149,8 +1162,8 @@ function sugerirTotalPagar() {
   const servicio = document.getElementById('pac-servicio').value;
   const ses = parseInt(document.getElementById('pac-sesiones-auth').value) || 0;
   const pack = packDeSesiones(ses);
-  // Si hay un pack con tarifa cargada (5/10/15/20) usamos su coseguro; si no, por sesión × N.
-  const total = (pack && tarifaDePack(pack, servicio) > 0)
+  // Pack 5/10/15/20 con precio -> su coseguro; si no, por sesión × N.
+  const total = (pack && precioPack(pack, servicio) > 0)
     ? coseguroPack(os, pack, servicio)
     : coseguroPack(os, 'Por sesión', servicio) * ses;
   document.getElementById('pac-total-pagar').value = total;
@@ -1161,9 +1174,15 @@ function onObrasSocialChange() {
   const infoDiv = document.getElementById('pac-os-info');
   if (os) {
     const servicio = document.getElementById('pac-servicio').value;
-    document.getElementById('pac-os-monto').textContent = ars((os.cubre && os.cubre['Por sesión']) || 0);
-    document.getElementById('pac-os-adicional').textContent = ars(coseguroPack(os, 'Por sesión', servicio)) + ' / sesión';
-    document.getElementById('pac-os-cobertura').textContent = servicio || '—';
+    const ses = parseInt(document.getElementById('pac-sesiones-auth').value) || 0;
+    const pack = packDeSesiones(ses);
+    const usaPack = pack && precioPack(pack, servicio) > 0;
+    // "Cubre" y "Coseguro" se escalan igual (× N en la ruta por-sesión) para que cierren con el precio total.
+    const cubreTotal = usaPack ? cubrePack(os, pack) : cubrePack(os, 'Por sesión') * (ses || 1);
+    const total = usaPack ? coseguroPack(os, pack, servicio) : coseguroPack(os, 'Por sesión', servicio) * (ses || 1);
+    document.getElementById('pac-os-monto').textContent = ars(cubreTotal);
+    document.getElementById('pac-os-adicional').textContent = ars(total);
+    document.getElementById('pac-os-cobertura').textContent = usaPack ? pack : (ses ? `por sesión × ${ses}` : 'por sesión');
     infoDiv.style.display = 'block';
     sugerirTotalPagar();
   } else { infoDiv.style.display = 'none'; }
@@ -1173,6 +1192,7 @@ function openModal(id) {
   populatePacienteSelects();
   document.getElementById(id).classList.add('open');
   if (id === 'modal-turno') {
+    resetTurnoForm();
     const sel = document.getElementById('turno-hora');
     if (!sel.children.length) {
       for (let h = 8; h <= 22; h++) ['00', '15', '30', '45'].forEach(m => {
@@ -1192,36 +1212,80 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 });
 
 // ===== GUARDAR / MUTACIONES =====
+function toggleDia(btn) {
+  btn.classList.toggle('active');
+  const hay = document.querySelectorAll('#turno-dias .dia-btn.active').length > 0;
+  document.getElementById('turno-repetir-extra').style.display = hay ? 'block' : 'none';
+}
+function resetTurnoForm() {
+  document.getElementById('turno-notas').value = '';
+  document.querySelectorAll('#turno-dias .dia-btn.active').forEach(b => b.classList.remove('active'));
+  const extra = document.getElementById('turno-repetir-extra');
+  if (extra) extra.style.display = 'none';
+}
+
 async function guardarTurno() {
-  const pacSel = document.getElementById('turno-paciente');
-  const pacId = pacSel.value;
+  const pacId = document.getElementById('turno-paciente').value;
   if (!pacId) { alert('Seleccioná un paciente'); return; }
   const pacObj = store.pacienteById(pacId);
   if (!pacObj) { alert('Paciente no encontrado'); return; }
+  const fechaBase = document.getElementById('turno-fecha').value;
+  if (!fechaBase) { alert('Elegí una fecha'); return; }
 
-  if (pacObj.sesionesAuth != null) {
-    const turnosDelPac = store.turnosDePaciente(pacObj.id).length;
-    const restantes = pacObj.sesionesAuth - turnosDelPac;
-    if (restantes <= 0) { mostrarBloqueado(pacObj, turnosDelPac); return; }
-    if (restantes === 1 && !confirm(`⚠️ ${pacObj.nombre} tiene solo 1 turno disponible de ${pacObj.sesionesAuth} autorizados.\n¿Querés agendar igual?`)) return;
-  }
-
+  const hora = document.getElementById('turno-hora').value;
   const serv = document.getElementById('turno-servicio').value;
   const servClassMap = { 'Rehabilitación': 'rehab', 'Readaptación': 'gym', 'Pilates': 'pilates', 'Recovery': 'recovery', 'Entrenamiento funcional': 'gym' };
-  await store.add('turnos', {
-    pacienteId: pacObj.id,
-    paciente: pacObj.nombre,
-    fecha: document.getElementById('turno-fecha').value,
-    hora: document.getElementById('turno-hora').value,
-    duracion: parseInt(document.getElementById('turno-duracion').value),
-    servicio: serv,
-    servClass: servClassMap[serv] || 'rehab',
-    prof: document.getElementById('turno-prof').value,
-    notas: document.getElementById('turno-notas').value.trim() || null,
-    asistencia: null
-  });
+  const prof = document.getElementById('turno-prof').value;
+  const duracion = parseInt(document.getElementById('turno-duracion').value);
+  const notas = document.getElementById('turno-notas').value.trim() || null;
+
+  // Una o varias fechas (repetición semanal en los días marcados).
+  const dias = [...document.querySelectorAll('#turno-dias .dia-btn.active')].map(b => parseInt(b.dataset.dia));
+  let fechas;
+  if (dias.length) {
+    const semanas = Math.max(1, parseInt(document.getElementById('turno-semanas').value) || 1);
+    fechas = [];
+    const start = new Date(fechaBase + 'T00:00:00');
+    for (let i = 0; i < semanas * 7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      if (dias.includes(d.getDay())) fechas.push(ymd(d));
+    }
+    if (!fechas.length) fechas = [fechaBase];
+  } else {
+    fechas = [fechaBase];
+  }
+
+  // Cupo de sesiones autorizadas (turnos existentes + a crear).
+  let cupo = Infinity;
+  if (pacObj.sesionesAuth != null) {
+    const usados = store.turnosDePaciente(pacObj.id).length;
+    cupo = pacObj.sesionesAuth - usados;
+    if (cupo <= 0) { mostrarBloqueado(pacObj, usados); return; }
+  }
+
+  const ocupados = [], sinCupo = [];
+  let creados = 0;
+  for (const fecha of fechas) {
+    // Horario ocupado: el mismo profesional ya tiene un turno a esa fecha y hora.
+    if (state.turnos.some(t => t.fecha === fecha && t.hora === hora && t.prof === prof)) { ocupados.push(fecha); continue; }
+    if (creados >= cupo) { sinCupo.push(fecha); continue; }
+    await store.add('turnos', {
+      pacienteId: pacObj.id, paciente: pacObj.nombre, fecha, hora, duracion,
+      servicio: serv, servClass: servClassMap[serv] || 'rehab', prof, notas, asistencia: null,
+    });
+    creados++;
+  }
+
   closeModal('modal-turno');
-  document.getElementById('turno-notas').value = '';
+  resetTurnoForm();
+
+  if (fechas.length > 1 || ocupados.length || sinCupo.length) {
+    let msg = `Se agendaron ${creados} turno${creados !== 1 ? 's' : ''}.`;
+    if (ocupados.length) msg += `\n\n⚠️ ${prof} ya tenía turno (horario ocupado) en:\n${ocupados.join(', ')}`;
+    if (sinCupo.length) msg += `\n\n⚠️ Sin sesiones autorizadas disponibles para:\n${sinCupo.join(', ')}`;
+    alert(msg);
+  }
+
   if (state.currentPage === 'agenda') renderAgenda();
   else if (state.currentPage === 'dashboard') renderDashboard();
 }
@@ -1418,9 +1482,9 @@ function fillPacienteForm(p) {
   set('pac-cobertura', p.tipoCobertura || 'particular');
   onCoberturaChange();
   set('pac-os-select', p.obraSocialId || '');
-  onObrasSocialChange();
   set('pac-sesiones-auth', p.sesionesAuth ?? '');
-  set('pac-total-pagar', p.totalPagar ?? '');
+  onObrasSocialChange(); // recién acá: ya están seteados servicio, OS y sesiones reales
+  set('pac-total-pagar', p.totalPagar ?? ''); // pisa la sugerencia con el total guardado
   if (p.fotoMedico && p.fotoMedico.src) {
     const esImg = p.fotoMedico.src.startsWith('data:image');
     document.getElementById('pac-foto-img').src = p.fotoMedico.src;
@@ -1756,7 +1820,13 @@ function verPaciente(id) {
         ${kv('Sesiones realizadas', p.sesiones)}
         ${kv('Sesiones restantes', restantes != null ? `${restantes} de ${p.sesionesAuth}` : 'Sin tope cargado')}
       </div>
-      ${obraSocial ? `<div style="margin-top:12px;padding:12px;border-radius:10px;background:var(--primary-light);border:1px solid var(--primary-soft);font-size:13px"><strong>${escapeHtml(obraSocial.nombre)}</strong> · Cubre ${ars((obraSocial.cubre && obraSocial.cubre['Por sesión']) || 0)}/sesión · <span style="color:var(--primary);font-weight:600">Coseguro ${ars(coseguroPack(obraSocial, 'Por sesión', p.servicio))}/sesión</span></div>` : ''}
+      ${obraSocial ? (() => {
+        const ses = p.sesionesAuth || 0;
+        const pack = packDeSesiones(ses);
+        const usaPack = pack && precioPack(pack, p.servicio) > 0;
+        const total = usaPack ? coseguroPack(obraSocial, pack, p.servicio) : coseguroPack(obraSocial, 'Por sesión', p.servicio) * (ses || 1);
+        return `<div style="margin-top:12px;padding:12px;border-radius:10px;background:var(--primary-light);border:1px solid var(--primary-soft);font-size:13px"><strong>${escapeHtml(obraSocial.nombre)}</strong> · <span style="color:var(--primary);font-weight:600">Coseguro ${ars(total)}${ses ? ` (${ses} ses.)` : ''}</span></div>`;
+      })() : ''}
     </div>
     <div style="display:flex;gap:12px;margin-bottom:20px">
       <div style="flex:1;text-align:center;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--primary)">${p.sesiones}</div><div style="font-size:12px;color:var(--text-muted)">realizadas</div></div>

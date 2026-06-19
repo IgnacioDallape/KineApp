@@ -170,6 +170,8 @@
   .chk-item { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; padding: 5px 0; }
   .chk-item input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
   @media (max-width: 560px) { .check-grid { grid-template-columns: 1fr; } }
+  .dia-btn { padding: 7px 13px; border: 1px solid var(--border); border-radius: 20px; background: var(--white); cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted); transition: all .12s; }
+  .dia-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
   /* MODAL */
   .modal-overlay {
