@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Kinesico Sport — Centro Kinesiológico</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
@@ -80,7 +80,7 @@
         <div class="stat-label">Pacientes activos</div>
         <div class="stat-trend up">&#8599; 3 este mes</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" id="card-pend">
         <div class="stat-num" style="color:var(--orange)" id="stat-pend">3</div>
         <div class="stat-label">Pagos pendientes</div>
         <div class="stat-trend down">&#8593; revisar</div>
@@ -97,7 +97,7 @@
         <div class="card-title">Turnos de hoy</div>
         <div id="turnos-hoy-list"></div>
       </div>
-      <div class="card">
+      <div class="card" id="card-caja">
         <div class="card-title">Últimos movimientos de caja</div>
         <div id="caja-list"></div>
       </div>
@@ -394,10 +394,12 @@
 </nav>
 
 <!-- MAS MENU (mobile) -->
-<div id="mas-menu" style="display:none;position:fixed;bottom:70px;right:12px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:300;overflow:hidden;min-width:180px">
+<div id="mas-menu" style="display:none;position:fixed;bottom:70px;right:12px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:300;overflow:hidden;min-width:210px">
+  <div id="mas-user" style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg)"></div>
   <div id="mas-cobranzas" onclick="navigate('cobranzas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128176; Cobranzas</div>
   <div onclick="navigate('recordatorios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128276; Recordatorios</div>
-  <div onclick="navigate('servicios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500">&#9881;&#65039; Servicios</div>
+  <div onclick="navigate('servicios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#9881;&#65039; Servicios</div>
+  <div onclick="doLogout()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:600;color:var(--red)">&#128682; Cerrar sesión</div>
 </div>
 
 <!-- MODALES -->
@@ -962,6 +964,10 @@
       navigator.serviceWorker.register('sw.js').catch(function () {});
     });
   }
+  // Bloquear zoom en mobile (iOS Safari ignora user-scalable=no -> hay que frenar los gestos).
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
+  });
 </script>
 </body>
 </html>

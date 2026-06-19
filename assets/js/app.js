@@ -83,7 +83,8 @@ async function startApp() {
 // Páginas que sólo ve el admin (las dos secciones de plata).
 const ADMIN_ONLY_PAGES = ['cobranzas', 'pagos'];
 // Accesos de navegación (sidebar / "Más" / bottom-nav) a ocultar para staff.
-const ADMIN_ONLY_NAV = ['nav-admin-section', 'nav-cobranzas', 'mas-cobranzas', 'nav-pagos', 'bnav-pagos'];
+// nav + cards financieras (pagos pendientes / movimientos de caja del dashboard)
+const ADMIN_ONLY_NAV = ['nav-admin-section', 'nav-cobranzas', 'mas-cobranzas', 'nav-pagos', 'bnav-pagos', 'card-pend', 'card-caja'];
 
 // Mostrar/ocultar lo que depende del rol (Cobranzas y Gastos: solo admin).
 function applyRolePermissions() {
@@ -109,6 +110,15 @@ function renderConnStatus() {
          <button class="btn-logout" onclick="doLogout()">Salir</button>
        </div>` : '';
   el.innerHTML = `${user}<div class="conn-mode">${modo}</div>`;
+
+  // Versión mobile: quién está logueado, dentro del menú "Más".
+  const masUser = document.getElementById('mas-user');
+  if (masUser) {
+    masUser.innerHTML = currentUser
+      ? `<div style="font-weight:600;font-size:14px">👤 ${escapeHtml(currentUser.nombre)} <span class="role-badge ${currentUser.role}">${currentUser.role === 'admin' ? 'Admin' : 'Staff'}</span></div>
+         <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${store.isCloud ? '🟢 Conectado' : '🟡 Modo local'}</div>`
+      : '';
+  }
 }
 
 // Cambio remoto (realtime) -> re-render de la vista actual.
