@@ -966,8 +966,8 @@ function renderServicios() {
             <div style="font-size:16px;font-weight:700;color:var(--green)">${ars(os.montoPorSesion)}</div>
           </div>
           <div style="flex:1;padding:8px 14px;background:var(--primary-light);text-align:center;border-left:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--primary);margin-bottom:2px">Adicional x10 sesiones</div>
-            <div style="font-size:16px;font-weight:700;color:var(--primary)">${ars(os.adicional10)}</div>
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--primary);margin-bottom:2px">Coseguro x sesión</div>
+            <div style="font-size:16px;font-weight:700;color:var(--primary)">${ars(coseguroOS(os).porSesion)}</div>
           </div>
         </div>
       </div>`).join('');
@@ -993,12 +993,14 @@ async function guardarObraSocial() {
   await store.add('obrasSociales', {
     nombre,
     cobertura: document.getElementById('os-cobertura').value,
+    valorSesion: parseInt(document.getElementById('os-valor-sesion').value) || 0,
     montoPorSesion: parseInt(document.getElementById('os-monto-sesion').value) || 0,
     adicional10: parseInt(document.getElementById('os-adicional10').value) || 0,
     servicios: document.getElementById('os-servicios').value,
     contacto: document.getElementById('os-contacto').value
   });
-  ['os-nombre', 'os-cobertura', 'os-servicios', 'os-contacto', 'os-monto-sesion', 'os-adicional10'].forEach(id => document.getElementById(id).value = '');
+  ['os-nombre', 'os-cobertura', 'os-servicios', 'os-contacto', 'os-valor-sesion', 'os-monto-sesion', 'os-adicional10'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('os-coseguro-preview').style.display = 'none';
   closeModal('modal-obrasocial'); renderServicios();
 }
 async function eliminarObraSocial(id) { await store.remove('obrasSociales', id); renderServicios(); }
@@ -1090,15 +1092,51 @@ function onCoberturaChange() {
   const hint = document.getElementById('pac-particular-hint');
   if (hint) hint.style.display = esOS ? 'none' : 'block';
 }
+// Coseguro = lo que paga el paciente = valor de la sesión − lo que reconoce la OS.
+function coseguroOS(os) {
+  if (!os) return { porSesion: 0, cada10: 0 };
+  const valor = os.valorSesion || 0;
+  const porSesion = Math.max(0, valor - (os.montoPorSesion || 0));
+  const cada10 = (os.adicional10 > 0) ? Math.max(0, valor * 10 - os.adicional10) : porSesion * 10;
+  return { porSesion, cada10 };
+}
+
+// Preview en vivo del coseguro mientras se carga/edita una obra social.
+function updateCoseguroPreview() {
+  const valor = parseInt(document.getElementById('os-valor-sesion').value) || 0;
+  const cs = coseguroOS({
+    valorSesion: valor,
+    montoPorSesion: parseInt(document.getElementById('os-monto-sesion').value) || 0,
+    adicional10: parseInt(document.getElementById('os-adicional10').value) || 0,
+  });
+  const box = document.getElementById('os-coseguro-preview');
+  if (valor > 0) {
+    document.getElementById('os-coseguro-sesion').textContent = ars(cs.porSesion);
+    document.getElementById('os-coseguro-10').textContent = ars(cs.cada10);
+    box.style.display = 'block';
+  } else { box.style.display = 'none'; }
+}
+
+// En el alta, sugiere automáticamente el "Total a pagar" con el coseguro × sesiones.
+function sugerirTotalPagar() {
+  if (document.getElementById('pac-cobertura').value !== 'obra_social') return;
+  const os = state.obrasSociales.find(x => x.id === document.getElementById('pac-os-select').value);
+  if (!os) return;
+  const cs = coseguroOS(os);
+  const ses = parseInt(document.getElementById('pac-sesiones-auth').value) || 0;
+  document.getElementById('pac-total-pagar').value = ses > 0 ? cs.porSesion * ses : cs.porSesion;
+}
+
 function onObrasSocialChange() {
-  const id = document.getElementById('pac-os-select').value;
-  const os = state.obrasSociales.find(x => x.id === id);
+  const os = state.obrasSociales.find(x => x.id === document.getElementById('pac-os-select').value);
   const infoDiv = document.getElementById('pac-os-info');
   if (os) {
+    const cs = coseguroOS(os);
     document.getElementById('pac-os-monto').textContent = ars(os.montoPorSesion);
-    document.getElementById('pac-os-adicional').textContent = ars(os.adicional10);
-    document.getElementById('pac-os-cobertura').textContent = os.cobertura;
+    document.getElementById('pac-os-adicional').textContent = ars(cs.porSesion) + ' / sesión';
+    document.getElementById('pac-os-cobertura').textContent = os.cobertura || '—';
     infoDiv.style.display = 'block';
+    sugerirTotalPagar();
   } else { infoDiv.style.display = 'none'; }
 }
 
@@ -1688,7 +1726,7 @@ function verPaciente(id) {
         ${kv('Sesiones realizadas', p.sesiones)}
         ${kv('Sesiones restantes', restantes != null ? `${restantes} de ${p.sesionesAuth}` : 'Sin tope cargado')}
       </div>
-      ${obraSocial ? `<div style="margin-top:12px;padding:12px;border-radius:10px;background:var(--primary-light);border:1px solid var(--primary-soft);font-size:13px"><strong>${escapeHtml(obraSocial.nombre)}</strong> · Cobertura ${escapeHtml(obraSocial.cobertura)} · Reconoce ${ars(obraSocial.montoPorSesion)} por sesión</div>` : ''}
+      ${obraSocial ? `<div style="margin-top:12px;padding:12px;border-radius:10px;background:var(--primary-light);border:1px solid var(--primary-soft);font-size:13px"><strong>${escapeHtml(obraSocial.nombre)}</strong> · Cobertura ${escapeHtml(obraSocial.cobertura)} · Reconoce ${ars(obraSocial.montoPorSesion)}/sesión · <span style="color:var(--primary);font-weight:600">Coseguro ${ars(coseguroOS(obraSocial).porSesion)}/sesión</span></div>` : ''}
     </div>
     <div style="display:flex;gap:12px;margin-bottom:20px">
       <div style="flex:1;text-align:center;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--primary)">${p.sesiones}</div><div style="font-size:12px;color:var(--text-muted)">realizadas</div></div>

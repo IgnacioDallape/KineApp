@@ -27,8 +27,9 @@ create table if not exists obras_sociales (
   cobertura        text,
   servicios        text,
   contacto         text,
-  monto_por_sesion integer default 0,
-  adicional10      integer default 0,
+  valor_sesion     integer default 0,       -- valor de la sesión (para calcular coseguro)
+  monto_por_sesion integer default 0,       -- lo que reconoce la OS por sesión
+  adicional10      integer default 0,       -- lo que reconoce la OS cada 10 sesiones
   created_at       timestamptz default now(),
   updated_at       timestamptz default now()
 );

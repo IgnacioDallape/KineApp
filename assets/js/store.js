@@ -278,12 +278,12 @@
     // ---------- seed modo local ----------
     _seedLocal() {
       const OS = [
-        ['OSDE', '80%', 'Rehabilitación, Pilates', '0800-555-6733', 4000, 8000],
-        ['Swiss Medical', '70%', 'Rehabilitación', '0810-888-7946', 3500, 6000],
-        ['Medifé', '75%', 'Rehabilitación, Readaptación', '0810-555-6334', 3800, 7000],
-        ['Galeno', '65%', 'Rehabilitación', '0800-222-6200', 3200, 5000],
-      ].map(([nombre, cobertura, servicios, contacto, montoPorSesion, adicional10]) =>
-        ({ id: uuid(), nombre, cobertura, servicios, contacto, montoPorSesion, adicional10 }));
+        ['OSDE', '80%', 'Rehabilitación, Pilates', '0800-555-6733', 5000, 4000, 40000],
+        ['Swiss Medical', '70%', 'Rehabilitación', '0810-888-7946', 5000, 3500, 35000],
+        ['Medifé', '75%', 'Rehabilitación, Readaptación', '0810-555-6334', 5000, 3800, 38000],
+        ['Galeno', '65%', 'Rehabilitación', '0800-222-6200', 5000, 3200, 32000],
+      ].map(([nombre, cobertura, servicios, contacto, valorSesion, montoPorSesion, adicional10]) =>
+        ({ id: uuid(), nombre, cobertura, servicios, contacto, valorSesion, montoPorSesion, adicional10 }));
 
       this.state.obrasSociales = OS;
       this.state.servicios = [
