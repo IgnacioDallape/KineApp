@@ -24,12 +24,13 @@ create extension if not exists pg_trgm;
 create table if not exists obras_sociales (
   id               uuid primary key default gen_random_uuid(),
   nombre           text not null,
-  cobertura        text,
   servicios        text,
   contacto         text,
-  valor_sesion     integer default 0,       -- valor de la sesión (para calcular coseguro)
-  monto_por_sesion integer default 0,       -- lo que reconoce la OS por sesión
-  adicional10      integer default 0,       -- lo que reconoce la OS cada 10 sesiones
+  cubre            jsonb,                    -- { "Por sesión": $, "Pack 10 sesiones": $, ... } que cubre la OS
+  cobertura        text,                     -- (legacy, sin uso)
+  valor_sesion     integer default 0,        -- (legacy, sin uso)
+  monto_por_sesion integer default 0,        -- (legacy, sin uso)
+  adicional10      integer default 0,        -- (legacy, sin uso)
   created_at       timestamptz default now(),
   updated_at       timestamptz default now()
 );
