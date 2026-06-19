@@ -157,7 +157,13 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- RLS — sólo usuarios autenticados (staff). Datos compartidos del centro.
+-- RLS — acceso con la anon key (el login real lo controla la app: usuario +
+-- contraseña con roles). Datos compartidos del centro.
+--   ⚠️ La anon key es pública (va en el frontend). Esto significa que quien
+--   tenga la key puede leer/escribir vía la API REST de Supabase. Es aceptable
+--   para una herramienta interna/MVP, NO para datos sensibles a gran escala.
+--   Para seguridad fuerte: migrar a Supabase Auth (un usuario por kinesiólogo)
+--   y cambiar 'to anon, authenticated' por 'to authenticated'. Ver SETUP.md.
 -- ---------------------------------------------------------------------
 do $$
 declare t text;
@@ -167,7 +173,7 @@ begin
     execute format('drop policy if exists "staff_all" on %s;', t);
     execute format(
       'create policy "staff_all" on %s
-         for all to authenticated
+         for all to anon, authenticated
          using (true) with check (true);', t);
   end loop;
 end $$;

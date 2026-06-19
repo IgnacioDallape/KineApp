@@ -13,8 +13,8 @@
 // =====================================================================
 
 window.KINE_CONFIG = {
-  supabaseUrl:     '',   // ej: 'https://xxxxxxxxxxxx.supabase.co'
-  supabaseAnonKey: '',   // ej: 'eyJhbGciOi...'  (anon / publishable)
+  supabaseUrl:     'https://evtycxsvtllsnujuxgjb.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2dHljeHN2dGxsc251anV4Z2piIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MTgyMDcsImV4cCI6MjA5NzM5NDIwN30.HqnkQqmifqCo-RrgxqeeSqJ7mBiy8gEA6xnjHuKezLU',
 };
 
 // =====================================================================

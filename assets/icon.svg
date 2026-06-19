@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0b0b0d"/>
+  <!-- texto dentro de la zona segura (~centro 70%) para que el recorte maskable no lo corte -->
+  <text x="256" y="322" text-anchor="middle" font-family="Arial, 'DM Sans', Helvetica, sans-serif" font-weight="800" font-size="170" letter-spacing="-6">
+    <tspan fill="#ffffff">k</tspan><tspan fill="#2563eb">S</tspan>
+  </text>
+</svg>

@@ -99,7 +99,9 @@ function renderConnStatus() {
   if (!el) return;
   const modo = store.isCloud
     ? '<span class="conn-dot online"></span> Conectado'
-    : '<span class="conn-dot local"></span> Modo local';
+    : (store.cloudError
+        ? '<span class="conn-dot local"></span> Modo local · falta correr el schema'
+        : '<span class="conn-dot local"></span> Modo local');
   const user = currentUser
     ? `<div class="conn-user">
          <span class="conn-user-name">👤 ${escapeHtml(currentUser.nombre)}</span>
@@ -181,6 +183,19 @@ function renderPage(page) {
 // ===== UTILS =====
 function isMobile() { return window.innerWidth <= 900; }
 function ars(n) { return '$' + (n || 0).toLocaleString('es-AR'); }
+// Fecha LOCAL en YYYY-MM-DD (NO usar toISOString: convierte a UTC y de noche
+// salta un día respecto de t.fecha, que se guarda en fecha local).
+function ymd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+// Normaliza un teléfono argentino a formato internacional para wa.me (prefijo 549).
+function telWhatsApp(tel) {
+  let n = (tel || '').replace(/\D/g, '');
+  if (!n) return '';
+  if (n.startsWith('54')) return n;        // ya tiene código de país
+  n = n.replace(/^0/, '').replace(/^15/, ''); // saca 0 de larga distancia y 15 de celular local
+  return '549' + n;                         // 54 (Arg) + 9 (celular)
+}
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -199,7 +214,7 @@ function renderDashboard() {
   document.getElementById('hoy-fecha').textContent =
     hoy.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  const fechaHoy = hoy.toISOString().split('T')[0];
+  const fechaHoy = ymd(hoy);
   const turnosHoy = state.turnos.filter(t => t.fecha === fechaHoy);
   document.getElementById('stat-hoy').textContent = turnosHoy.length;
   document.getElementById('stat-pac').textContent = state.pacientes.length;
@@ -320,7 +335,7 @@ function renderAgenda() {
     const diaNom = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     document.getElementById('week-label').textContent =
       `${diaNom[dia.getDay()]} ${dia.getDate()}/${dia.getMonth() + 1}/${dia.getFullYear()}`;
-    const fechaStr = dia.toISOString().split('T')[0];
+    const fechaStr = ymd(dia);
     const esHoy = dia.toDateString() === hoy.toDateString();
     const slot = slotHtmlFor(fechaStr);
     let html = '<div class="cell agenda-header"></div>';
@@ -349,7 +364,7 @@ function renderAgenda() {
   horas.forEach(hora => {
     html += `<div class="cell agenda-time">${hora}</div>`;
     dias.forEach(d => {
-      const fechaStr = d.toISOString().split('T')[0];
+      const fechaStr = ymd(d);
       html += `<div class="cell agenda-slot" onclick="abrirNuevoTurno('${fechaStr}','${hora}')">${slotHtmlFor(fechaStr)(hora)}
         <div class="slot-add-btn" onclick="event.stopPropagation();abrirNuevoTurno('${fechaStr}','${hora}')">+</div></div>`;
     });
@@ -589,7 +604,7 @@ async function borrarPaciente(id) {
 // ===== ASISTENCIA =====
 function renderAsistencia() {
   const fechaInput = document.getElementById('fecha-asist');
-  if (!fechaInput.value) fechaInput.value = new Date().toISOString().split('T')[0];
+  if (!fechaInput.value) fechaInput.value = ymd(new Date());
   const fecha = fechaInput.value;
   const turnosDia = state.turnos.filter(t => t.fecha === fecha);
 
@@ -724,7 +739,7 @@ async function eliminarGasto(id) { await store.remove('gastos', id); renderPagos
 
 // ===== COBRANZAS =====
 function renderCobranzas() {
-  const hoyStr = new Date().toISOString().split('T')[0];
+  const hoyStr = ymd(new Date());
   const mesStr = hoyStr.slice(0, 7);
   const cobradoHoy = state.pagos.filter(p => p.estado === 'Pagado' && p.fecha === hoyStr).reduce((s, p) => s + p.monto, 0);
   const cobradoMes = state.pagos.filter(p => p.estado === 'Pagado' && (p.fecha || '').slice(0, 7) === mesStr).reduce((s, p) => s + p.monto, 0);
@@ -822,38 +837,70 @@ function switchTab(section, tab) {
 }
 
 // ===== RECORDATORIOS =====
+function formatFechaLarga(fechaStr) {
+  try { return new Date(fechaStr + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }); }
+  catch (_) { return fechaStr; }
+}
+function cargarRecConfig() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('kineapp:rec-config') || '{}');
+    if (cfg.tiempo1) document.getElementById('rec-tiempo1').value = cfg.tiempo1;
+    if (cfg.tiempo2) document.getElementById('rec-tiempo2').value = cfg.tiempo2;
+    if (cfg.mensaje) document.getElementById('rec-mensaje').value = cfg.mensaje;
+  } catch (_) {}
+}
+function enviarRecordatorioWpp(turnoId) {
+  const t = state.turnos.find(x => x.id === turnoId);
+  if (!t) return;
+  const pac = t.pacienteId ? store.pacienteById(t.pacienteId) : state.pacientes.find(p => p.nombre === t.paciente);
+  const tel = telWhatsApp(pac?.tel);
+  if (!tel) { alert('Este paciente no tiene teléfono cargado.\nAgregalo en la ficha para poder enviarle el recordatorio.'); return; }
+  const plantilla = document.getElementById('rec-mensaje')?.value
+    || 'Hola {nombre}. Te recordamos tu turno para el {fecha} a las {hora} con {profesional}. ¡Nos vemos!';
+  const msg = plantilla
+    .replace(/{nombre}/g, (pac?.nombre || t.paciente || '').split(' ')[0])
+    .replace(/{fecha}/g, formatFechaLarga(t.fecha))
+    .replace(/{hora}/g, t.hora)
+    .replace(/{profesional}/g, t.prof || '');
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
 function renderRecordatorios() {
+  cargarRecConfig();
   const manana = new Date(); manana.setDate(manana.getDate() + 1);
-  const manStr = manana.toISOString().split('T')[0];
+  const manStr = ymd(manana);
   const turnosManana = state.turnos.filter(t => t.fecha === manStr);
-  document.getElementById('rec-enviados').textContent = 12;
+  document.getElementById('rec-enviados').textContent = turnosManana.length;
 
   const prox = document.getElementById('proximos-rec');
   prox.innerHTML = turnosManana.length === 0
     ? '<p style="color:var(--text-muted);font-size:13px">No hay turnos para mañana</p>'
-    : turnosManana.map(t => `
+    : turnosManana.map(t => {
+        const pac = t.pacienteId ? store.pacienteById(t.pacienteId) : null;
+        const tel = (pac?.tel || '').replace(/\D/g, '');
+        return `
       <div class="reminder-item">
         <div class="reminder-status pending"></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:500">${escapeHtml(t.paciente)}</div>
-          <div style="font-size:11px;color:var(--text-muted)">Mañana ${t.hora} · Se enviará en ~2 hs</div>
+          <div style="font-size:11px;color:var(--text-muted)">Mañana ${t.hora}${tel ? '' : ' · ⚠️ sin teléfono'}</div>
         </div>
-        <span style="font-size:16px">📱</span>
-      </div>`).join('');
+        <button class="btn btn-sm btn-success" ${tel ? '' : 'disabled'} onclick="enviarRecordatorioWpp('${t.id}')">📱 Enviar</button>
+      </div>`;
+      }).join('');
 
-  document.getElementById('hist-rec').innerHTML = state.pacientes.slice(0, 6).map((p, i) => `
-    <div class="reminder-item">
-      <div class="reminder-status"></div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:500">${escapeHtml(p.nombre)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">Enviado el ${new Date(Date.now() - i * 86400000).toLocaleDateString('es-AR')} · Respondió ✅</div>
-      </div>
-      <span class="badge badge-green">Enviado</span>
-    </div>`).join('');
+  document.getElementById('hist-rec').innerHTML =
+    '<p style="color:var(--text-muted);font-size:13px">Los recordatorios que envíes por WhatsApp van a quedar registrados acá. (El envío hoy es manual desde el botón “Enviar”.)</p>';
 }
 function guardarRecConfig() {
+  const cfg = {
+    tiempo1: document.getElementById('rec-tiempo1').value,
+    tiempo2: document.getElementById('rec-tiempo2').value,
+    mensaje: document.getElementById('rec-mensaje').value,
+  };
+  try { localStorage.setItem('kineapp:rec-config', JSON.stringify(cfg)); } catch (_) {}
   const sel = document.getElementById('rec-tiempo1');
-  alert('✅ Configuración guardada.\n\nLos recordatorios se enviarán automáticamente\n' + sel.options[sel.selectedIndex].text);
+  alert('✅ Configuración guardada.\n\nEl mensaje y los tiempos quedaron guardados.\nRecordatorio principal: ' + sel.options[sel.selectedIndex].text);
 }
 
 // ===== SERVICIOS =====
@@ -966,7 +1013,7 @@ function verServicio(nombreServicio) {
     document.getElementById('servicio-detail-content').innerHTML =
       '<p style="color:var(--text-muted);font-size:14px;text-align:center;padding:24px 0">No hay pacientes en este servicio aún.</p>';
   } else {
-    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoyStr = ymd(new Date());
     document.getElementById('servicio-detail-content').innerHTML = pacientes.map(p => {
       const turnsPac = turnosSrv.filter(t => t.pacienteId === p.id);
       const proximoTurno = turnsPac.filter(t => t.fecha >= hoyStr).sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
@@ -1068,7 +1115,7 @@ function openModal(id) {
       });
     }
     if (!document.getElementById('turno-fecha').value)
-      document.getElementById('turno-fecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('turno-fecha').value = ymd(new Date());
   }
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -1231,6 +1278,66 @@ function fichaEvalHtml(e) {
     </div>`;
 }
 
+function imprimirFichaActual() {
+  if (currentInformePacienteId) imprimirFicha(currentInformePacienteId);
+}
+function imprimirFicha(id) {
+  const p = obtenerPacienteInforme(id);
+  if (!p) return;
+  const obraSocial = (p.tipoCobertura === 'obra_social' && p.obraSocialId) ? state.obrasSociales.find(x => x.id === p.obraSocialId) : null;
+  const e = p.evalClinica || {};
+  const obs = e.obs || {};
+  const row = (l, v) => `<div class="fp-row"><div class="l">${l}</div><div class="v">${escapeHtml(v ?? '') || '—'}</div></div>`;
+  const dolor = v => (v != null && v !== '') ? `${v}/10` : '—';
+  const ck = (label, on) => `<div class="ck">${on ? '☑' : '☐'} ${label}</div>`;
+  const hoy = new Date();
+  document.getElementById('ficha-print').innerHTML = `
+    <div class="fp-wrap">
+      <div class="fp-head">
+        <div class="fp-logo">kinesico<span class="b">SPORT</span><small>Centro Kinesiológico</small></div>
+        <div class="fp-title">Ficha kinesiológica<br>Emitida: ${hoy.toLocaleDateString('es-AR')}</div>
+      </div>
+      <div class="fp-name">${escapeHtml(p.nombre)}</div>
+      <div style="font-size:13px;color:#555">${escapeHtml(p.servicio || '')} · ${escapeHtml(p.prof || '')}</div>
+
+      <div class="fp-h2">Datos del paciente</div>
+      <div class="fp-grid">
+        ${row('DNI', p.dni)}${row('Edad', p.edad)}
+        ${row('Teléfono', p.tel)}${row('Email', p.email)}
+        ${row('Deporte / actividad', p.deporte)}${row('Cobertura', obraSocial ? obraSocial.nombre : 'Particular')}
+      </div>
+      ${row('Motivo de consulta', p.motivo)}${row('Lesión / diagnóstico', p.lesion)}
+
+      <div class="fp-h2">Evaluación física</div>
+      <div class="fp-grid">
+        ${row('Dolor en reposo', dolor(e.dolorReposo))}${row('Dolor en movimiento', dolor(e.dolorMovimiento))}
+        ${row('Dolor en actividad', dolor(e.dolorDeporte))}${row('¿Inflamación?', e.inflamacion)}
+        ${row('¿Hematoma / moretón?', e.hematoma)}${row('¿Inestabilidad?', e.inestabilidad)}
+      </div>
+      ${row('Rango de movilidad articular (grados)', e.rangoMovilidad)}
+      ${row('Mecanismo lesional', e.mecanismo)}
+      ${row('Antecedentes deportivos y lesiones previas', e.antecDeportivos)}
+
+      <div class="fp-h2">Observación kinesiológica</div>
+      <div class="fp-checks">${EVAL_OBS.map(([k, label]) => ck(label, obs[k])).join('')}</div>
+      ${e.obsTexto ? `<div style="margin-top:8px;font-size:13px"><strong>Observaciones:</strong> ${escapeHtml(e.obsTexto)}</div>` : ''}
+
+      <div class="fp-h2">Plan de rehabilitación</div>
+      <div class="fp-grid">
+        ${row('Objetivo principal', p.objetivo)}${row('Etapa actual', p.etapaActual || deducirEtapaPaciente(p))}
+      </div>
+      ${row('Plan de rehabilitación', p.planRehab)}
+      ${row('Progresión prevista / actual', p.progresion)}
+
+      <div class="fp-firmas">
+        <div class="fp-firma"><div class="line"></div><div class="cap">Firma del paciente</div></div>
+        <div class="fp-firma"><div class="line"></div><div class="cap">Firma y sello del profesional</div></div>
+      </div>
+      <div class="fp-fecha">Fecha: ____ / ____ / ________</div>
+    </div>`;
+  window.print();
+}
+
 function fillPacienteForm(p) {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
   set('pac-nombre', p.nombre); set('pac-dni', p.dni); set('pac-tel', p.tel); set('pac-email', p.email);
@@ -1380,7 +1487,7 @@ async function confirmarCobro() {
   }
   await store.add('pagos', {
     pacienteId: p?.id || null, paciente: p?.nombre || '',
-    fecha: new Date().toISOString().split('T')[0], concepto: tipo, monto, estado
+    fecha: ymd(new Date()), concepto: tipo, monto, estado
   });
   document.getElementById('modal-cobro').classList.remove('open');
   renderPagos();
@@ -1396,7 +1503,7 @@ async function guardarPago() {
 
   await store.add('pagos', {
     pacienteId: p?.id || null, paciente: p?.nombre || '',
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: ymd(new Date()),
     concepto: document.getElementById('pago-tipo').value, monto, estado
   });
   if (p) {
@@ -1509,7 +1616,7 @@ function compartirInformeWhatsApp(id) {
   const paciente = obtenerPacienteInforme(id);
   if (!paciente) return;
   if (!paciente.tel) { alert('Este paciente no tiene teléfono cargado.'); return; }
-  const telefono = paciente.tel.replace(/\D/g, '');
+  const telefono = telWhatsApp(paciente.tel);
   const texto = encodeURIComponent(`Hola, compartimos el informe de plan de rehabilitación y progresión.\n\n${generarInformePacienteTexto(paciente)}`);
   window.open(`https://wa.me/${telefono}?text=${texto}`, '_blank');
 }

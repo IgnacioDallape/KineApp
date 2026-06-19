@@ -41,10 +41,12 @@
       doc.setFillColor(...C.accent);
       doc.rect(M + 13, cy - 9, 6, 18, 'F');
       doc.rect(M + 7, cy - 3, 18, 6, 'F');
-      // wordmark
-      doc.setTextColor(...C.white);
-      doc.setFont('times', 'bold'); doc.setFontSize(first ? 24 : 17);
-      doc.text('KineApp', M + 42, cy + (first ? 2 : 1));
+      // wordmark "kinesico SPORT"
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(first ? 22 : 16);
+      const lx = M + 42, ly = cy + (first ? 2 : 1);
+      doc.setTextColor(...C.white); doc.text('kinesico', lx, ly);
+      const kw = doc.getTextWidth('kinesico');
+      doc.setTextColor(147, 197, 253); doc.text('SPORT', lx + kw + 4, ly);
       if (first) {
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
         doc.setTextColor(219, 234, 254);

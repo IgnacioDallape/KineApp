@@ -131,8 +131,20 @@
 
     // ---------- carga inicial ----------
     async load() {
-      if (this.isCloud) await this._loadCloud();
-      else this._loadLocal();
+      if (this.isCloud) {
+        try {
+          await this._loadCloud();
+        } catch (e) {
+          // Si la nube falla (sin schema, RLS, red), no rompemos: caemos a local.
+          console.error('[KineApp] No se pudo cargar desde Supabase, usando modo local:', e);
+          this.isCloud = false;
+          this.mode = 'local';
+          this.cloudError = (e && e.message) || 'Error de conexión';
+          this._loadLocal(true);   // true = vino de fallo cloud -> no sembrar demo
+        }
+      } else {
+        this._loadLocal();
+      }
       this.reindex();
     },
 
@@ -158,7 +170,7 @@
       return all;
     },
 
-    _loadLocal() {
+    _loadLocal(fromCloudFail) {
       const raw = localStorage.getItem('kineapp:db');
       if (raw) {
         try {
@@ -166,6 +178,12 @@
           for (const key of Object.keys(TABLES)) this.state[key] = db[key] || [];
           return;
         } catch (_) { /* corrupto -> reseed */ }
+      }
+      if (fromCloudFail) {
+        // Cayó desde cloud y no hay datos locales: arrancamos vacíos, NO sembramos
+        // los pacientes demo encima de lo que el usuario espera de la nube.
+        for (const key of Object.keys(TABLES)) this.state[key] = [];
+        return;
       }
       this._seedLocal();
     },
@@ -225,13 +243,19 @@
     // ---------- realtime ----------
     subscribeRealtime() {
       if (!this.isCloud) return;
+      if (this._chan) { try { this._sb.removeChannel(this._chan); } catch (_) {} }  // evita canales duplicados
       const chan = this._sb.channel('kineapp-db');
       for (const table of Object.values(TABLES)) {
         chan.on('postgres_changes', { event: '*', schema: 'public', table }, payload => {
           this._applyRemote(table, payload);
         });
       }
-      chan.subscribe();
+      chan.subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[KineApp] Realtime no disponible (' + status + '): los cambios de otros usuarios no se reflejarán en vivo hasta recargar.');
+        }
+      });
+      this._chan = chan;
     },
 
     _applyRemote(table, payload) {
