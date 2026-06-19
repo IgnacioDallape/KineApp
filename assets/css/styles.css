@@ -25,15 +25,15 @@
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   html { touch-action: manipulation; }   /* sin doble-tap zoom en mobile */
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; min-height: 100dvh; }
 
   /* LAYOUT */
-  .app { display: flex; min-height: 100vh; }
+  .app { display: flex; min-height: 100vh; min-height: 100dvh; }
   
   /* SIDEBAR */
   .sidebar {
     width: 240px; background: var(--white); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100;
+    display: flex; flex-direction: column; position: fixed; height: 100vh; height: 100dvh; z-index: 100;
   }
   .sidebar-logo {
     padding: 24px 20px 16px;
@@ -384,7 +384,9 @@
   .bnav-item .bicon { font-size: 22px; line-height: 1; }
   .bnav-item.active { color: var(--primary); }
 
-  @media (max-width: 768px) {
+  /* Mobile/tablet: mismo breakpoint que isMobile() en JS (<=900) -> sidebar
+     oculto + bottom-nav (con usuario y "Cerrar sesión" en el menú "Más"). */
+  @media (max-width: 900px) {
     .sidebar { display: none; }
     .bottom-nav { display: block; }
     .main { margin-left: 0; padding: 16px 14px 88px; }
@@ -398,17 +400,6 @@
     .modal { padding: 20px 16px; width: 95vw !important; }
     #pacientes-tabla-desktop { display: none; }
     #pacientes-cards-mobile { display: block; }
-  }
-
-  @media (min-width: 641px) and (max-width: 900px) {
-    .sidebar { width: 64px; }
-    .sidebar-logo h1, .sidebar-logo p, .nav-item span { display: none; }
-    .nav-item { justify-content: center; padding: 10px; }
-    .sidebar-footer { display: none; }
-    .main { margin-left: 64px; padding: 20px; }
-    .grid-4 { grid-template-columns: 1fr 1fr; }
-    .grid-3 { grid-template-columns: 1fr 1fr; }
-    .agenda-grid { grid-template-columns: 40px repeat(3, 1fr); }
   }
 
   /* FICHA CLINICA */
