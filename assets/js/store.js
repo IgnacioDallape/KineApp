@@ -403,6 +403,9 @@
     // alias semántico
     patch(key, id, fields) { return this.update(key, id, fields); },
 
+    // Borrado RECUPERABLE: la fila va a la papelera y se la saca de su tabla. Se puede
+    // restaurar o eliminar definitivamente desde la papelera. Si la papelera todavía no
+    // está migrada, cae a borrado normal (para no romper el borrado).
     async remove(key, id) {
       const arr = this.state[key];
       const i = arr.findIndex(x => x.id === id);
@@ -410,17 +413,107 @@
       if (i >= 0) arr.splice(i, 1);
       this.reindex();
       this.lastWriteError = null;
-      if (this.isCloud) {
-        const { error } = await this._sb.from(TABLES[key]).delete().eq('id', id);
-        if (error) {
-          // El borrado en la nube falló: devolvemos la fila al cache para NO desincronizar
-          // (si no, la UI mostraría como borrado algo que sigue en la nube).
-          console.error('[KineApp] delete', key, error);
-          this.lastWriteError = error;
-          if (removed) { arr.push(removed); this.reindex(); }
+
+      if (!this.isCloud) {
+        if (removed) this._localTrashAdd(key, removed);   // papelera local
+        this._persistLocal();
+        return { error: null };
+      }
+
+      // 1) Guardar copia en la papelera (si está disponible).
+      if (removed && this.papeleraReady !== false) {
+        const entry = {
+          id: uuid(), tabla: TABLES[key], registro_id: id,
+          datos: toRow(key, removed), nombre: this._labelPapelera(key, removed),
+          deleted_at: new Date().toISOString(),
+        };
+        const ins = await this._sb.from('papelera').insert(entry);
+        if (ins.error) {
+          if (_isMissingTableError(ins.error)) {
+            this.papeleraReady = false;   // papelera no migrada -> borrado normal
+          } else {
+            // No se pudo respaldar: NO borramos (rollback) para no perder el dato.
+            console.error('[KineApp] papelera insert', ins.error);
+            this.lastWriteError = ins.error;
+            if (removed) { arr.push(removed); this.reindex(); }
+            return { error: this.lastWriteError };
+          }
+        } else {
+          this.papeleraReady = true;
         }
-      } else this._persistLocal();
+      }
+      // 2) Borrar la fila de su tabla.
+      const { error } = await this._sb.from(TABLES[key]).delete().eq('id', id);
+      if (error) {
+        console.error('[KineApp] delete', key, error);
+        this.lastWriteError = error;
+        if (removed) { arr.push(removed); this.reindex(); }
+      }
       return { error: this.lastWriteError };
+    },
+
+    // ---------- papelera ----------
+    _tiposPapelera: { pacientes: 'Paciente', turnos: 'Turno', pagos: 'Pago', gastos: 'Gasto', servicios: 'Servicio', tarifas: 'Tarifa', obrasSociales: 'Obra social', profesionales: 'Profesional' },
+    _labelPapelera(key, r) {
+      if (!r) return '';
+      switch (key) {
+        case 'pacientes': return r.nombre || 'Paciente';
+        case 'turnos': return `${r.paciente || ''} ${r.fecha || ''} ${r.hora || ''}`.trim() || 'Turno';
+        case 'pagos': return `${r.paciente || ''} ${r.concepto || ''}`.trim() || 'Pago';
+        case 'gastos': return r.concepto || 'Gasto';
+        case 'servicios': return r.nombre || 'Servicio';
+        case 'tarifas': return `${r.servicio || ''} / ${r.concepto || ''}`.trim() || 'Tarifa';
+        case 'obrasSociales': return r.nombre || 'Obra social';
+        case 'profesionales': return r.nombre || 'Profesional';
+        default: return r.nombre || '';
+      }
+    },
+    async fetchTrash() {
+      if (!this.isCloud) return { ready: true, items: this._localTrashLoad().map(e => ({ id: e.id, tabla: e.tabla, key: e.key, nombre: e.nombre, deleted_at: e.deleted_at })) };
+      const { data, error } = await this._sb.from('papelera').select('*').order('deleted_at', { ascending: false }).limit(500);
+      if (error) {
+        if (_isMissingTableError(error)) { this.papeleraReady = false; return { ready: false, items: [] }; }
+        return { ready: true, items: [], error: error.message };
+      }
+      this.papeleraReady = true;
+      return { ready: true, items: (data || []).map(d => ({ id: d.id, tabla: d.tabla, key: DB_TO_KEY[d.tabla], nombre: d.nombre, deleted_at: d.deleted_at })) };
+    },
+    async restoreItem(papeleraId) {
+      if (!this.isCloud) return this._localTrashRestore(papeleraId);
+      const { data, error } = await this._sb.from('papelera').select('*').eq('id', papeleraId).single();
+      if (error || !data) return { ok: false, error: (error && error.message) || 'No encontrado' };
+      const key = DB_TO_KEY[data.tabla];
+      if (!key) return { ok: false, error: 'Tabla desconocida' };
+      const up = await this._sb.from(data.tabla).upsert(data.datos, { onConflict: 'id' });
+      if (up.error) return { ok: false, error: up.error.message };
+      await this._sb.from('papelera').delete().eq('id', papeleraId);
+      this._upsertCache(key, fromRow(key, data.datos));
+      return { ok: true, key, nombre: data.nombre };
+    },
+    async purgeItem(papeleraId) {
+      if (!this.isCloud) return this._localTrashPurge(papeleraId);
+      const { error } = await this._sb.from('papelera').delete().eq('id', papeleraId);
+      return { ok: !error, error: error && error.message };
+    },
+    // papelera local (modo sin nube)
+    _localTrashLoad() { try { return JSON.parse(localStorage.getItem('kineapp:papelera') || '[]'); } catch (_) { return []; } },
+    _localTrashSave(a) { try { localStorage.setItem('kineapp:papelera', JSON.stringify(a)); } catch (_) {} },
+    _localTrashAdd(key, row) {
+      const a = this._localTrashLoad();
+      a.unshift({ id: uuid(), tabla: TABLES[key], key, registro_id: row.id, datos: row, nombre: this._labelPapelera(key, row), deleted_at: new Date().toISOString() });
+      this._localTrashSave(a);
+    },
+    _localTrashRestore(pid) {
+      const a = this._localTrashLoad(); const e = a.find(x => x.id === pid);
+      if (!e) return { ok: false, error: 'No encontrado' };
+      this._upsertCache(e.key, e.datos);
+      this._localTrashSave(a.filter(x => x.id !== pid));
+      this._persistLocal();
+      return { ok: true, key: e.key, nombre: e.nombre };
+    },
+    _localTrashPurge(pid) {
+      this._localTrashSave(this._localTrashLoad().filter(x => x.id !== pid));
+      return { ok: true };
     },
 
     // Inserta o reemplaza por id dentro del array del cache (idempotente).

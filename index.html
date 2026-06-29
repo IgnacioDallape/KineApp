@@ -384,8 +384,10 @@
         <label class="btn btn-sm btn-secondary" style="cursor:pointer;margin:0">&#11014; Restaurar desde archivo
           <input type="file" accept="application/json,.json" onchange="restaurarBackup(this)" style="display:none">
         </label>
+        <button class="btn btn-sm btn-secondary" onclick="abrirPapelera()">&#128465; Papelera</button>
       </div>
       <div id="backup-info" style="font-size:11px;color:var(--text-muted);margin-top:10px"></div>
+      <p style="font-size:11px;color:var(--text-muted);margin:8px 0 0">Cuando borrás algo (paciente, turno, etc.) va a la <strong>Papelera</strong> y lo podés restaurar.</p>
     </div>
   </div>
 
@@ -666,6 +668,20 @@
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-pago')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarPago()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-papelera">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🗑 Papelera</h3>
+      <button class="modal-close" onclick="closeModal('modal-papelera')">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px">Lo que borrás queda acá. Podés <strong>Restaurar</strong> o <strong>Eliminar definitivamente</strong> (esto último no se puede deshacer).</p>
+    <div id="papelera-list" style="max-height:55vh;overflow:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-papelera')">Cerrar</button>
     </div>
   </div>
 </div>

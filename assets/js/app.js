@@ -364,11 +364,8 @@ function renderAgendaFiltros() {
 function populateAgendaProf() {
   const sel = document.getElementById('agenda-prof');
   if (!sel) return;
-  const profs = [...new Set([
-    ...profesionalesEfectivos(),
-    ...state.turnos.map(t => t.prof),
-    ...state.pacientes.map(p => p.prof),
-  ].filter(Boolean))].sort();
+  // Sólo los profesionales registrados en Supabase (no los nombres viejos de turnos).
+  const profs = [...new Set(profesionalesEfectivos())].sort();
   sel.innerHTML = '<option value="">Todos los profesionales</option>' + profs.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
   sel.value = filtroProf;
 }
@@ -1134,6 +1131,46 @@ function renderBackupInfo() {
     : 'Todavía no hay copia automática en este equipo.';
 }
 
+// ===== PAPELERA (borrado recuperable) =====
+const TIPOS_PAPELERA = { pacientes: 'Paciente', turnos: 'Turno', pagos: 'Pago', gastos: 'Gasto', servicios: 'Servicio', tarifas: 'Tarifa', obrasSociales: 'Obra social', profesionales: 'Profesional' };
+async function abrirPapelera() {
+  document.getElementById('modal-papelera').classList.add('open');
+  await renderPapelera();
+}
+async function renderPapelera() {
+  const cont = document.getElementById('papelera-list');
+  if (!cont) return;
+  cont.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Cargando…</p>';
+  const res = await store.fetchTrash();
+  if (!res.ready) {
+    cont.innerHTML = '<p style="color:var(--text-muted);font-size:13px">La papelera todavía no está activada. Para usarla, corré en Supabase la migración <strong>supabase/migracion-papelera.sql</strong>. Hasta entonces, borrar elimina de forma definitiva.</p>';
+    return;
+  }
+  if (!res.items.length) { cont.innerHTML = '<p style="color:var(--text-muted);font-size:13px">La papelera está vacía.</p>'; return; }
+  cont.innerHTML = res.items.map(it => `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:6px;margin-bottom:6px">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.nombre || '(sin nombre)')}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${escapeHtml(TIPOS_PAPELERA[it.key] || it.tabla || '')} · ${it.deleted_at ? new Date(it.deleted_at).toLocaleDateString('es-AR') : ''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-sm btn-secondary" onclick="restaurarItem('${it.id}')">Restaurar</button>
+        <button class="btn btn-sm" style="color:var(--red);border:1px solid var(--border)" onclick="eliminarDefinitivo('${it.id}')">Eliminar</button>
+      </div>
+    </div>`).join('');
+}
+async function restaurarItem(pid) {
+  const r = await store.restoreItem(pid);
+  if (r.ok) { await renderPapelera(); renderPage(state.currentPage); }
+  else alert('No se pudo restaurar: ' + (r.error || 'error'));
+}
+async function eliminarDefinitivo(pid) {
+  if (!confirm('¿Eliminar este registro DEFINITIVAMENTE?\n\nEsto NO se puede deshacer.')) return;
+  const r = await store.purgeItem(pid);
+  if (r.ok) await renderPapelera();
+  else alert('No se pudo eliminar: ' + (r.error || 'error'));
+}
+
 function verServicio(servId) {
   const s = state.servicios.find(x => x.id === servId) || state.servicios.find(x => x.nombre === servId);
   if (!s) return;
@@ -1218,19 +1255,22 @@ function populatePacienteSelects() {
 }
 
 // ===== PROFESIONALES =====
-// Lista efectiva: los cargados por el centro, o (si no hay ninguno) los de ejemplo.
+// SÓLO los profesionales cargados por el centro (en Supabase). Sin nombres de ejemplo.
 function profesionalesEfectivos() {
-  const nombres = state.profesionales.map(p => p.nombre).filter(Boolean);
-  return nombres.length ? nombres : ['Lic. García', 'Lic. Romero', 'Lic. Paz'];
+  return state.profesionales.map(p => p.nombre).filter(Boolean);
 }
-// Rellena un <select> de profesional con la lista efectiva. 'extra' suma (y selecciona)
-// un nombre puntual aunque no esté en la lista (ej. el profesional de un paciente que
-// se está editando y que ya fue borrado del listado).
+// Rellena un <select> de profesional con los registrados. 'extra' suma (y selecciona) un
+// nombre puntual aunque no esté en la lista (ej. el profesional de un turno/paciente viejo).
 function fillProfSelect(sel, extra) {
   if (!sel) return;
   const set = new Set(profesionalesEfectivos());
   if (extra) set.add(extra);
-  sel.innerHTML = [...set].map(n => `<option>${escapeHtml(n)}</option>`).join('');
+  const opts = [...set];
+  if (!opts.length) {
+    sel.innerHTML = '<option value="">— Agregá profesionales en Servicios —</option>';
+    return;
+  }
+  sel.innerHTML = opts.map(n => `<option>${escapeHtml(n)}</option>`).join('');
   if (extra) sel.value = extra;
 }
 function populateProfSelects() {
