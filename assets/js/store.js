@@ -188,6 +188,7 @@
         try {
           await this._loadCloud();
           this._detectLocalBackup();   // ¿quedaron datos atrapados en este dispositivo?
+          this._saveCloudSnapshot();   // copia local de la nube (red de seguridad)
         } catch (e) {
           // Si la nube falla (sin schema, RLS, red), no rompemos: caemos a local.
           console.error('[KineApp] No se pudo cargar desde Supabase, usando modo local:', e);
@@ -276,6 +277,62 @@
       return { ok: errores.length === 0, subidos, errores };
     },
 
+    // ---------- copia de seguridad (red contra borrados accidentales) ----------
+    // Snapshot local automático de los datos de la nube en cada carga.
+    _saveCloudSnapshot() {
+      try {
+        const tables = {};
+        for (const key of Object.keys(TABLES)) tables[key] = this.state[key];
+        let total = 0; for (const key of Object.keys(TABLES)) total += (tables[key] || []).length;
+        if (total === 0) return; // no pisar una copia buena con una vacía
+        localStorage.setItem('kineapp:cloud-backup', JSON.stringify({ savedAt: new Date().toISOString(), tables }));
+      } catch (_) { /* localStorage lleno: no es crítico */ }
+    },
+    getCloudSnapshotInfo() {
+      try {
+        const snap = JSON.parse(localStorage.getItem('kineapp:cloud-backup') || 'null');
+        if (!snap) return null;
+        let total = 0; for (const key of Object.keys(TABLES)) total += ((snap.tables || {})[key] || []).length;
+        return { savedAt: snap.savedAt, total };
+      } catch (_) { return null; }
+    },
+
+    // Devuelve TODOS los datos para descargar como archivo de respaldo.
+    exportBackup() {
+      const tables = {};
+      for (const key of Object.keys(TABLES)) tables[key] = this.state[key];
+      return { app: 'kineapp', version: 1, exportedAt: new Date().toISOString(), tables };
+    },
+
+    // Restaura un backup. upsert ignoreDuplicates: AGREGA lo que falte, nunca pisa ni borra.
+    async importBackup(data) {
+      const tables = (data && data.tables) || {};
+      const order = ['obrasSociales', 'servicios', 'tarifas', 'profesionales', 'gastos', 'pacientes', 'turnos', 'pagos'];
+      let agregados = 0; const errores = [];
+      for (const key of order) {
+        if (!TABLES[key]) continue;
+        const rows = (tables[key] || []).filter(r => r && r.id);
+        if (!rows.length) continue;
+        if (this.isCloud) {
+          if (this.missingTables && this.missingTables.has(TABLES[key])) continue;
+          const payload = rows.map(r => toRow(key, r));
+          const { error } = await this._sb.from(TABLES[key]).upsert(payload, { onConflict: 'id', ignoreDuplicates: true });
+          if (error) errores.push(TABLES[key] + ': ' + error.message);
+          else agregados += rows.length;
+        } else {
+          // Local: AGREGAR sólo lo que falta (mismo contrato que ignoreDuplicates en la
+          // nube). NO pisar filas existentes con la versión del backup (podría ser vieja).
+          const existentes = new Set(this.state[key].map(x => x.id));
+          rows.forEach(r => { if (!existentes.has(r.id)) { this._upsertCache(key, r); agregados++; } });
+        }
+      }
+      if (!errores.length) {
+        if (this.isCloud) { try { await this._loadCloud(); } catch (_) {} } else this._persistLocal();
+        this.reindex();
+      }
+      return { ok: errores.length === 0, agregados, errores };
+    },
+
     // Supabase corta en 1000 filas/consulta -> traemos por páginas.
     async _fetchAll(table) {
       const PAGE = 1000;
@@ -349,12 +406,21 @@
     async remove(key, id) {
       const arr = this.state[key];
       const i = arr.findIndex(x => x.id === id);
+      const removed = i >= 0 ? arr[i] : null;
       if (i >= 0) arr.splice(i, 1);
       this.reindex();
+      this.lastWriteError = null;
       if (this.isCloud) {
         const { error } = await this._sb.from(TABLES[key]).delete().eq('id', id);
-        if (error) console.error('[KineApp] delete', key, error);
+        if (error) {
+          // El borrado en la nube falló: devolvemos la fila al cache para NO desincronizar
+          // (si no, la UI mostraría como borrado algo que sigue en la nube).
+          console.error('[KineApp] delete', key, error);
+          this.lastWriteError = error;
+          if (removed) { arr.push(removed); this.reindex(); }
+        }
       } else this._persistLocal();
+      return { error: this.lastWriteError };
     },
 
     // Inserta o reemplaza por id dentro del array del cache (idempotente).

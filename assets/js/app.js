@@ -287,7 +287,7 @@ function renderDashboard() {
           <div style="font-weight:500;font-size:14px">${escapeHtml(t.paciente)}</div>
           <div style="font-size:12px;color:var(--text-muted)">${t.hora} · ${escapeHtml(t.prof)}</div>
         </div>
-        <span class="badge badge-${servicioColor(t.servicio)}">${t.servicio}</span>
+        <span class="badge badge-${servicioColor(t.servicio)}">${escapeHtml(t.servicio)}</span>
       </div>`).join('');
 
   const caja = document.getElementById('caja-list');
@@ -342,7 +342,11 @@ function changeWeek(dir) {
   } else { weekOffset += dir; }
   renderAgenda();
 }
-function setFiltroActividad(serv) { filtroActividad = serv; renderAgenda(); }
+function setFiltroActividad(v) {
+  const s = state.servicios.find(x => x.id === v);   // recibe id (o '' para "Todos")
+  filtroActividad = s ? s.nombre : v;
+  renderAgenda();
+}
 function setFiltroProf(prof) { filtroProf = prof || ''; renderAgenda(); }
 
 // Chips de filtro por servicio: dinámicos según los servicios registrados.
@@ -350,10 +354,9 @@ function renderAgendaFiltros() {
   const cont = document.getElementById('agenda-filtros-serv');
   if (!cont) return;
   let html = `<button class="filtro-act ${filtroActividad === '' ? 'active' : ''}" onclick="setFiltroActividad('')">Todos</button>`;
-  html += state.servicios.map(s => {
-    const nombreEsc = (s.nombre || '').replace(/'/g, "\\'");
-    return `<button class="filtro-act ${filtroActividad === s.nombre ? 'active' : ''}" style="--fc:var(--${s.color || 'primary'})" onclick="setFiltroActividad('${nombreEsc}')">${s.icono || ''} ${escapeHtml(s.nombre)}</button>`;
-  }).join('');
+  html += state.servicios.map(s =>
+    `<button class="filtro-act ${filtroActividad === s.nombre ? 'active' : ''}" style="--fc:var(--${s.color || 'primary'})" onclick="setFiltroActividad('${s.id}')">${escapeHtml(s.icono || '')} ${escapeHtml(s.nombre)}</button>`
+  ).join('');
   cont.innerHTML = html;
 }
 
@@ -476,6 +479,14 @@ function cardKV(label, value) {
     <div style="font-size:14px;font-weight:500">${escapeHtml(value)}</div></div>`;
 }
 
+// Resuelve el paciente de un turno: por id (seguro) o, si falta, por nombre SÓLO si es
+// inequívoco (evita ajustar las sesiones del paciente equivocado con nombres repetidos).
+function pacienteDeTurno(t) {
+  if (t && t.pacienteId) return store.pacienteById(t.pacienteId);
+  const m = state.pacientes.filter(p => p.nombre === (t && t.paciente));
+  return m.length === 1 ? m[0] : null;
+}
+
 // Aplica asistencia a un turno y ajusta las sesiones del paciente (1 sola fuente).
 async function setAsistenciaTurno(turnoId, estado) {
   const t = state.turnos.find(x => x.id === turnoId);
@@ -483,7 +494,7 @@ async function setAsistenciaTurno(turnoId, estado) {
   const eraAsistio = t.asistencia === 'asistio';
   const next = t.asistencia === estado ? null : estado;
   await store.update('turnos', turnoId, { asistencia: next });
-  const pac = t.pacienteId ? store.pacienteById(t.pacienteId) : state.pacientes.find(p => p.nombre === t.paciente);
+  const pac = pacienteDeTurno(t);
   if (pac) {
     if (next === 'asistio' && !eraAsistio) {
       const nuevas = (pac.sesiones || 0) + 1;
@@ -504,7 +515,16 @@ async function marcarTurnoAsist(id, estado) {
 }
 async function eliminarTurno(id) {
   if (!confirm('¿Eliminar este turno?')) return;
-  await store.remove('turnos', id);
+  const t = state.turnos.find(x => x.id === id);
+  // Borrar PRIMERO el turno; si la nube falla, no tocamos las sesiones (evita dejar el
+  // contador desincronizado por una escritura que sí entró y otra que no).
+  const r = await store.remove('turnos', id);
+  if (r && r.error) { alert('No se pudo eliminar el turno (revisá la conexión). Reintentá.'); return; }
+  // Turno borrado OK: recién ahora revertimos la sesión que había sumado la asistencia.
+  if (t && t.asistencia === 'asistio') {
+    const pac = pacienteDeTurno(t);
+    if (pac) await store.update('pacientes', pac.id, { sesiones: Math.max(0, (pac.sesiones || 0) - 1) });
+  }
   closeModal('modal-turno-detalle');
   renderAgenda();
 }
@@ -562,7 +582,7 @@ function renderPacientes() {
     <tr>
       <td><strong>${escapeHtml(p.nombre)}</strong></td>
       <td>${escapeHtml(p.tel)}</td>
-      <td><span class="badge badge-${servicioColor(p.servicio)}">${p.servicio}</span></td>
+      <td><span class="badge badge-${servicioColor(p.servicio)}">${escapeHtml(p.servicio)}</span></td>
       <td>${escapeHtml(p.lesion)}</td>
       <td>${escapeHtml(p.prof)}</td>
       <td style="text-align:center">${p.sesionesAuth != null
@@ -590,7 +610,7 @@ function renderPacientes() {
             <div>
               <div class="pac-card-nombre">${escapeHtml(p.nombre)}</div>
               <div style="margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-                <span class="badge badge-${servicioColor(p.servicio)}">${p.servicio}</span>
+                <span class="badge badge-${servicioColor(p.servicio)}">${escapeHtml(p.servicio)}</span>
                 ${os ? `<span class="badge badge-blue">${escapeHtml(os)}</span>` : '<span class="badge badge-gray">Particular</span>'}
               </div>
             </div>
@@ -795,7 +815,12 @@ async function guardarGasto() {
   closeModal('modal-gasto');
   renderPagos();
 }
-async function eliminarGasto(id) { await store.remove('gastos', id); renderPagos(); }
+async function eliminarGasto(id) {
+  const g = state.gastos.find(x => x.id === id);
+  if (g && !confirm(`¿Eliminar el gasto "${g.concepto}" de ${ars(g.monto)}?`)) return;
+  await store.remove('gastos', id);
+  renderPagos();
+}
 
 // ===== COBRANZAS =====
 function renderCobranzas() {
@@ -823,7 +848,7 @@ function renderCobranzas() {
     <div class="deuda-alert">
       <span style="font-size:22px">📱</span>
       <div style="flex:1"><strong>${escapeHtml(p.nombre)}</strong> — deuda de <strong>${ars(p.deuda)}</strong>
-        <span style="font-size:12px;color:var(--text-muted);margin-left:8px">${p.servicio}</span></div>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:8px">${escapeHtml(p.servicio)}</span></div>
       <button class="btn btn-sm btn-primary" onclick="abrirCobro('${p.id}')">Cobrar</button>
     </div>`).join('');
 
@@ -838,7 +863,7 @@ function renderCobranzas() {
   document.getElementById('tbody-cobranzas-pacientes').innerHTML = state.pacientes.map(p => `
     <tr>
       <td><strong>${escapeHtml(p.nombre)}</strong></td>
-      <td>${p.servicio}</td>
+      <td>${escapeHtml(p.servicio)}</td>
       <td>${osBadge(p)}</td>
       <td style="text-align:center">${p.sesiones}</td>
       <td style="${p.deuda > 0 ? 'color:var(--red);font-weight:600' : ''}">${ars(p.deuda)}</td>
@@ -861,7 +886,7 @@ function renderCobranzas() {
           <div>
             <div class="pac-card-nombre">${escapeHtml(p.nombre)}</div>
             <div style="margin-top:3px;display:flex;gap:6px;flex-wrap:wrap">
-              <span class="badge badge-${servicioColor(p.servicio)}">${p.servicio}</span>${osBadge(p)}
+              <span class="badge badge-${servicioColor(p.servicio)}">${escapeHtml(p.servicio)}</span>${osBadge(p)}
             </div>
           </div>
           <span class="badge ${p.deuda > 0 ? 'badge-red' : 'badge-green'}" style="font-size:13px">${p.deuda > 0 ? ars(p.deuda) : 'Al día'}</span>
@@ -969,9 +994,9 @@ function renderServicios() {
     const pacs = state.pacientes.filter(p => p.servicio === s.nombre).length;
     const turnos = state.turnos.filter(t => t.servicio === s.nombre).length;
     return `
-      <div class="servicio-card" onclick="verServicio('${(s.nombre || '').replace(/'/g, "\\'")}')">
+      <div class="servicio-card" onclick="verServicio('${s.id}')">
         <button class="servicio-del" onclick="event.stopPropagation();eliminarServicio('${s.id}')" title="Eliminar servicio">✕</button>
-        <div class="servicio-icon">${s.icono}</div>
+        <div class="servicio-icon">${escapeHtml(s.icono || '')}</div>
         <h4>${escapeHtml(s.nombre)}</h4>
         <p>${escapeHtml(s.desc)}</p>
         <div style="display:flex;gap:12px;margin-top:12px;align-items:flex-end;justify-content:space-between">
@@ -985,6 +1010,7 @@ function renderServicios() {
   }).join('');
 
   renderProfesionales();
+  renderBackupInfo();
 
   const tarifasList = document.getElementById('tarifas-list');
   if (state.tarifas.length === 0) {
@@ -1041,7 +1067,12 @@ async function guardarTarifa() {
   document.getElementById('tarifa-monto').value = '';
   closeModal('modal-tarifa'); renderServicios();
 }
-async function eliminarTarifa(id) { await store.remove('tarifas', id); renderServicios(); }
+async function eliminarTarifa(id) {
+  const t = state.tarifas.find(x => x.id === id);
+  if (t && !confirm(`¿Eliminar la tarifa "${t.concepto}" de ${t.servicio || ''} (${ars(t.monto)})?`)) return;
+  await store.remove('tarifas', id);
+  renderServicios();
+}
 
 async function guardarObraSocial() {
   const nombre = document.getElementById('os-nombre').value.trim();
@@ -1057,10 +1088,56 @@ async function guardarObraSocial() {
   document.getElementById('os-coseguro-preview').style.display = 'none';
   closeModal('modal-obrasocial'); renderServicios();
 }
-async function eliminarObraSocial(id) { await store.remove('obrasSociales', id); renderServicios(); }
+async function eliminarObraSocial(id) {
+  const os = state.obrasSociales.find(x => x.id === id);
+  const n = state.pacientes.filter(p => p.obraSocialId === id).length;
+  const aviso = n > 0 ? `\n\n⚠️ ${n} paciente${n !== 1 ? 's' : ''} la tiene${n !== 1 ? 'n' : ''} asignada y quedará${n !== 1 ? 'n' : ''} sin cobertura.` : '';
+  if (os && !confirm(`¿Eliminar la obra social "${os.nombre}"?${aviso}`)) return;
+  await store.remove('obrasSociales', id);
+  renderServicios();
+}
 
-function verServicio(nombreServicio) {
-  const s = state.servicios.find(x => x.nombre === nombreServicio);
+// ===== COPIA DE SEGURIDAD =====
+// Descarga TODOS los datos como archivo JSON (respaldo manual del dueño).
+function descargarBackup() {
+  const data = store.exportBackup();
+  const total = Object.values(data.tables).reduce((s, a) => s + (Array.isArray(a) ? a.length : 0), 0);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `kineapp-backup-${ymd(new Date())}.json`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  alert(`Backup descargado: ${total} registros. Guardalo en un lugar seguro.`);
+}
+// Restaura desde un archivo de backup. Sólo AGREGA lo que falte (no pisa ni borra).
+async function restaurarBackup(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  let data;
+  try { data = JSON.parse(await file.text()); }
+  catch (_) { alert('El archivo no es un backup válido.'); input.value = ''; return; }
+  if (!data || data.app !== 'kineapp' || !data.tables) { alert('El archivo no parece un backup de KineApp.'); input.value = ''; return; }
+  const total = Object.values(data.tables).reduce((s, a) => s + (Array.isArray(a) ? a.length : 0), 0);
+  if (!confirm(`¿Restaurar este backup? Tiene ${total} registros.\n\nSe AGREGA lo que falte. No se pisa ni se borra nada de lo que ya tengas.`)) { input.value = ''; return; }
+  const r = await store.importBackup(data);
+  input.value = '';
+  if (r.ok) { alert(`Restauración lista: ${r.agregados} registros procesados.`); renderPage(state.currentPage); renderBackupInfo(); }
+  else alert('Algunos datos no se pudieron restaurar:\n' + (r.errores || []).join('\n'));
+}
+function renderBackupInfo() {
+  const el = document.getElementById('backup-info');
+  if (!el) return;
+  const snap = store.getCloudSnapshotInfo();
+  el.textContent = snap
+    ? `Copia automática en este equipo: ${new Date(snap.savedAt).toLocaleString('es-AR')} · ${snap.total} registros.`
+    : 'Todavía no hay copia automática en este equipo.';
+}
+
+function verServicio(servId) {
+  const s = state.servicios.find(x => x.id === servId) || state.servicios.find(x => x.nombre === servId);
+  if (!s) return;
+  const nombreServicio = s.nombre;
   const pacientes = state.pacientes.filter(p => p.servicio === nombreServicio);
   const turnosSrv = state.turnos.filter(t => t.servicio === nombreServicio);
   document.getElementById('servicio-modal-title').textContent = (s?.icono || '') + ' ' + nombreServicio;
@@ -1744,10 +1821,14 @@ async function confirmarCobro() {
   if (!monto) { alert('Ingresá el monto'); return; }
 
   const p = state.pacientes.find(x => x.id === pacId);
-  if (p && estado === 'Pagado' && p.deuda > 0) {
-    await store.update('pacientes', p.id, { deuda: Math.max(0, p.deuda - monto), estado: (p.deuda - monto <= 0) ? 'pagado' : p.estado });
+  // La deuda SÓLO se descuenta con un cobro "Saldar deuda". Un cobro por sesión/pack
+  // marcado Pagado NO debe borrar la deuda vieja del paciente.
+  if (p && tipo === 'Saldar deuda' && estado === 'Pagado' && p.deuda > 0) {
+    if (monto > p.deuda && !confirm(`El monto (${ars(monto)}) es mayor a la deuda (${ars(p.deuda)}).\nSe salda por completo y el excedente NO queda como saldo a favor.\n\n¿Continuar?`)) return;
+    const nueva = Math.max(0, p.deuda - monto);
+    await store.update('pacientes', p.id, { deuda: nueva, estado: nueva <= 0 ? 'pagado' : p.estado });
   } else if (p && estado === 'Pendiente') {
-    await store.update('pacientes', p.id, { deuda: p.deuda + monto, estado: 'pendiente' });
+    await store.update('pacientes', p.id, { deuda: (p.deuda || 0) + monto, estado: 'pendiente' });
   }
   await store.add('pagos', {
     pacienteId: p?.id || null, paciente: p?.nombre || '',
@@ -1763,16 +1844,20 @@ async function guardarPago() {
   const pacId = pac.value;
   const p = state.pacientes.find(x => x.id === pacId);
   const monto = parseInt(document.getElementById('pago-monto').value) || 0;
+  const tipo = document.getElementById('pago-tipo').value;
   const estado = document.getElementById('pago-estado').value;
 
   await store.add('pagos', {
     pacienteId: p?.id || null, paciente: p?.nombre || '',
-    fecha: ymd(new Date()),
-    concepto: document.getElementById('pago-tipo').value, monto, estado
+    fecha: ymd(new Date()), concepto: tipo, monto, estado
   });
   if (p) {
-    if (estado === 'Pendiente') await store.update('pacientes', p.id, { deuda: p.deuda + monto, estado: 'pendiente' });
-    else if (estado === 'Pagado' && p.deuda > 0) await store.update('pacientes', p.id, { deuda: Math.max(0, p.deuda - monto), estado: (p.deuda - monto <= 0) ? 'pagado' : p.estado });
+    if (estado === 'Pendiente') await store.update('pacientes', p.id, { deuda: (p.deuda || 0) + monto, estado: 'pendiente' });
+    // Sólo "Saldar deuda" descuenta de la deuda (un pago por sesión/pack no la borra).
+    else if (tipo === 'Saldar deuda' && estado === 'Pagado' && p.deuda > 0) {
+      const nueva = Math.max(0, p.deuda - monto);
+      await store.update('pacientes', p.id, { deuda: nueva, estado: nueva <= 0 ? 'pagado' : p.estado });
+    }
   }
   closeModal('modal-pago');
   renderPagos();
@@ -1927,7 +2012,7 @@ function verPaciente(id) {
       <div style="width:52px;height:52px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${servicioEmoji(p.servicio)}</div>
       <div>
         <div style="font-size:18px;font-weight:600">${escapeHtml(p.nombre)}</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-top:2px">${escapeHtml(p.prof)} · <span class="badge badge-${servicioColor(p.servicio)}">${p.servicio}</span></div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:2px">${escapeHtml(p.prof)} · <span class="badge badge-${servicioColor(p.servicio)}">${escapeHtml(p.servicio)}</span></div>
       </div>
     </div>
     <div class="ficha-actions">
