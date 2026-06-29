@@ -123,6 +123,12 @@ create table if not exists tarifas (
   created_at timestamptz default now()
 );
 
+create table if not exists profesionales (
+  id         uuid primary key default gen_random_uuid(),
+  nombre     text not null,
+  created_at timestamptz default now()
+);
+
 -- ---------------------------------------------------------------------
 -- ÍNDICES (claves para escalar a miles de filas)
 -- ---------------------------------------------------------------------
@@ -170,7 +176,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['obras_sociales','servicios','pacientes','turnos','pagos','gastos','tarifas'] loop
+  foreach t in array array['obras_sociales','servicios','pacientes','turnos','pagos','gastos','tarifas','profesionales'] loop
     execute format('alter table %s enable row level security;', t);
     execute format('drop policy if exists "staff_all" on %s;', t);
     execute format(
@@ -186,7 +192,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['obras_sociales','servicios','pacientes','turnos','pagos','gastos','tarifas'] loop
+  foreach t in array array['obras_sociales','servicios','pacientes','turnos','pagos','gastos','tarifas','profesionales'] loop
     begin
       execute format('alter publication supabase_realtime add table %s;', t);
     exception when duplicate_object then null;

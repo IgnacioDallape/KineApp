@@ -29,6 +29,7 @@
     pagos:         'pagos',
     gastos:        'gastos',
     tarifas:       'tarifas',
+    profesionales: 'profesionales',
   };
   const DB_TO_KEY = Object.fromEntries(Object.entries(TABLES).map(([k, v]) => [v, k]));
 
@@ -67,11 +68,56 @@
           return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
         });
 
+  // ---- carga resiliente del SDK de Supabase ----
+  // El SDK viene de un CDN. Si la primera carga (el <script> de index.html) falla
+  // por red floja, NO queremos caer a modo local en silencio (los datos quedarían
+  // atrapados en el dispositivo). Reintentamos con CDNs alternativos antes de rendirnos.
+  function _loadScriptOnce(src, timeoutMs) {
+    return new Promise(resolve => {
+      const sc = document.createElement('script');
+      let settled = false;
+      const done = ok => { if (!settled) { settled = true; resolve(ok); } };
+      sc.src = src;
+      sc.onload = () => done(true);
+      sc.onerror = () => done(false);
+      document.head.appendChild(sc);
+      setTimeout(() => done(false), timeoutMs || 5000);
+    });
+  }
+  async function ensureSupabaseSdk() {
+    if (window.supabase && window.supabase.createClient) return true;
+    // El <script> sincrónico de index.html ya intentó jsDelivr; probamos respaldos.
+    const cdns = [
+      'https://unpkg.com/@supabase/supabase-js@2',
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+    ];
+    for (const url of cdns) {
+      await _loadScriptOnce(url, 5000);
+      if (window.supabase && window.supabase.createClient) return true;
+    }
+    return false;
+  }
+  // ¿El error es estrictamente "la tabla no existe" (schema viejo)? -> se ignora esa tabla.
+  // Sólo códigos inequívocos: 42P01 (Postgres "relation does not exist") y PGRST205
+  // (PostgREST "Could not find the table"). NO matcheamos PGRST204 (es error de COLUMNA),
+  // ni 'schema cache' ni 'does not exist' a secas: aparecen en errores de columna (42703)
+  // o transitorios de PostgREST sobre tablas que SÍ existen, y tragarlos mostraría una
+  // tabla con datos como vacía. Cualquier otro error (red/RLS) debe propagarse.
+  function _isMissingTableError(e) {
+    const code = (e && e.code) || '';
+    if (code === '42P01' || code === 'PGRST205') return true;
+    // Backstop por mensaje SOLO para el patrón exacto de tabla faltante (42P01 sin code).
+    const msg = ((e && e.message) || '').toLowerCase();
+    return msg.includes('relation') && msg.includes('does not exist');
+  }
+
   // =====================================================================
   const store = {
-    state: { pacientes: [], turnos: [], pagos: [], gastos: [], servicios: [], tarifas: [], obrasSociales: [] },
+    state: { pacientes: [], turnos: [], pagos: [], gastos: [], servicios: [], tarifas: [], obrasSociales: [], profesionales: [] },
     mode: 'local',          // 'cloud' | 'local'
     isCloud: false,
+    sdkFailed: false,       // hay credenciales pero el SDK no cargó (sin nube = datos solo locales)
+    localBackup: null,      // datos que quedaron solo en este dispositivo (para subir a la nube)
     user: null,
     onChange: null,         // (tableKey) => void   (lo setea app.js)
     onAuthChange: null,     // (user) => void
@@ -97,8 +143,12 @@
     // ---------- init / auth ----------
     async init() {
       const cfg = window.KINE_CONFIG || {};
-      const haveSdk = typeof window.supabase !== 'undefined' && window.supabase.createClient;
-      if (cfg.supabaseUrl && cfg.supabaseAnonKey && haveSdk) {
+      const haveCreds = !!(cfg.supabaseUrl && cfg.supabaseAnonKey);
+      // Si hay credenciales, esperamos/reintentamos el SDK antes de decidir el modo.
+      const haveSdk = haveCreds
+        ? await ensureSupabaseSdk()
+        : (typeof window.supabase !== 'undefined' && window.supabase.createClient);
+      if (haveCreds && haveSdk) {
         this._sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
         this.mode = 'cloud';
         this.isCloud = true;
@@ -111,8 +161,11 @@
       } else {
         this.mode = 'local';
         this.isCloud = false;
-        if (cfg.supabaseUrl && !haveSdk) {
-          console.warn('[KineApp] SDK de Supabase no cargó; usando modo local.');
+        if (haveCreds && !haveSdk) {
+          // Credenciales OK pero el SDK no cargó (CDN inalcanzable). NO es modo local
+          // "normal": los datos se guardan solo acá y no se sincronizan. Avisamos fuerte.
+          this.sdkFailed = true;
+          console.error('[KineApp] No se pudo cargar el SDK de Supabase. Modo local SIN sincronización — revisá la conexión y recargá.');
         }
       }
       return { mode: this.mode, user: this.user };
@@ -134,6 +187,7 @@
       if (this.isCloud) {
         try {
           await this._loadCloud();
+          this._detectLocalBackup();   // ¿quedaron datos atrapados en este dispositivo?
         } catch (e) {
           // Si la nube falla (sin schema, RLS, red), no rompemos: caemos a local.
           console.error('[KineApp] No se pudo cargar desde Supabase, usando modo local:', e);
@@ -149,10 +203,77 @@
     },
 
     async _loadCloud() {
+      this.missingTables = new Set();
       for (const [key, table] of Object.entries(TABLES)) {
-        const rows = await this._fetchAll(table);
-        this.state[key] = rows.map(r => fromRow(key, r));
+        try {
+          const rows = await this._fetchAll(table);
+          this.state[key] = rows.map(r => fromRow(key, r));
+        } catch (e) {
+          // Tabla que todavía no existe (ej. 'profesionales' si no corrieron el schema
+          // nuevo): se ignora esa tabla, NO se cae todo el modo cloud. Errores reales
+          // (red/RLS) sí se propagan para que load() caiga a local.
+          if (_isMissingTableError(e)) {
+            console.warn('[KineApp] Tabla "' + table + '" no existe todavía (corré el schema actualizado). Se ignora por ahora.');
+            this.missingTables.add(table);
+            this.state[key] = [];
+          } else {
+            throw e;
+          }
+        }
       }
+    },
+
+    // ---------- migración: datos atrapados en este dispositivo ----------
+    // Si el dispositivo estuvo en modo local (sin nube) y guardó datos, quedan en
+    // localStorage sin sincronizar. Los detectamos para ofrecer subirlos.
+    _detectLocalBackup() {
+      this.localBackup = null;
+      this.localBackupCounts = null;
+      this.localBackupTotal = 0;
+      try {
+        const raw = localStorage.getItem('kineapp:db');
+        if (!raw) return;
+        const db = JSON.parse(raw);
+        const counts = {};
+        let total = 0;
+        for (const key of Object.keys(TABLES)) {
+          const n = (db[key] || []).length;
+          if (n) { counts[key] = n; total += n; }
+        }
+        if (total > 0) { this.localBackup = db; this.localBackupCounts = counts; this.localBackupTotal = total; }
+      } catch (_) { /* ignorar backup corrupto */ }
+    },
+
+    // Sube a la nube los datos locales (upsert por id, idempotente). Respeta el orden
+    // de dependencias (FK): primero catálogos y pacientes, después turnos/pagos.
+    async pushLocalToCloud() {
+      if (!this.isCloud || !this._sb) return { ok: false, subidos: 0, errores: ['No hay conexión a la nube'] };
+      if (!this.localBackup) return { ok: true, subidos: 0, errores: [] };
+      const db = this.localBackup;
+      const order = ['obrasSociales', 'servicios', 'tarifas', 'profesionales', 'gastos', 'pacientes', 'turnos', 'pagos'];
+      let subidos = 0; const errores = [];
+      for (const key of order) {
+        if (!TABLES[key]) continue;
+        // Si la tabla no existe en la nube (migración pendiente), no intentamos subir:
+        // erroraría y abortaría toda la migración.
+        if (this.missingTables && this.missingTables.has(TABLES[key])) continue;
+        const rows = (db[key] || []).filter(r => r && r.id);
+        if (!rows.length) continue;
+        const payload = rows.map(r => toRow(key, r));
+        // ignoreDuplicates: si un id ya existe en la nube, NO se pisa (cumple "no se borra
+        // ni se pisa lo existente"). Sólo agrega lo que falta.
+        const { error } = await this._sb.from(TABLES[key]).upsert(payload, { onConflict: 'id', ignoreDuplicates: true });
+        if (error) errores.push(TABLES[key] + ': ' + error.message);
+        else subidos += rows.length;
+      }
+      if (!errores.length) {
+        // Ya subió todo: limpiamos el backup local para no re-ofrecer. El recargado desde
+        // la nube es best-effort: si la red falla acá, los datos YA quedaron arriba igual.
+        localStorage.removeItem('kineapp:db');
+        this.localBackup = null; this.localBackupTotal = 0;
+        try { await this._loadCloud(); this.reindex(); } catch (_) { /* recarga best-effort */ }
+      }
+      return { ok: errores.length === 0, subidos, errores };
     },
 
     // Supabase corta en 1000 filas/consulta -> traemos por páginas.
@@ -179,13 +300,16 @@
           return;
         } catch (_) { /* corrupto -> reseed */ }
       }
-      if (fromCloudFail) {
-        // Cayó desde cloud y no hay datos locales: arrancamos vacíos, NO sembramos
-        // los pacientes demo encima de lo que el usuario espera de la nube.
+      const cfg = window.KINE_CONFIG || {};
+      const haveCreds = !!(cfg.supabaseUrl && cfg.supabaseAnonKey);
+      if (fromCloudFail || haveCreds) {
+        // Instalación REAL (hay credenciales) o caída desde cloud: NUNCA sembrar los
+        // pacientes/turnos demo. Si no, después se ofrecerían para "subir a la nube" como
+        // datos basura. Arrancamos vacíos.
         for (const key of Object.keys(TABLES)) this.state[key] = [];
         return;
       }
-      this._seedLocal();
+      this._seedLocal();   // sólo demo puro: sin backend configurado en config.js
     },
 
     _persistLocal() {
@@ -201,9 +325,10 @@
     async add(key, obj) {
       if (!obj.id) obj.id = uuid();
       this._upsertCache(key, obj);
+      this.lastWriteError = null;
       if (this.isCloud) {
         const { error } = await this._sb.from(TABLES[key]).insert(toRow(key, obj));
-        if (error) console.error('[KineApp] insert', key, error);
+        if (error) { console.error('[KineApp] insert', key, error); this.lastWriteError = error; }
       } else this._persistLocal();
       return obj;
     },

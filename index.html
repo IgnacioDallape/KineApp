@@ -60,6 +60,9 @@
 <!-- MAIN -->
 <main class="main">
 
+  <!-- Banner de sincronización (sin nube / datos locales para subir) -->
+  <div id="sync-banner" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;line-height:1.4"></div>
+
   <!-- DASHBOARD -->
   <div class="page active" id="page-dashboard">
     <div class="page-header">
@@ -364,6 +367,18 @@
         <div id="obras-sociales-list"></div>
       </div>
     </div>
+
+    <!-- PROFESIONALES -->
+    <div class="card" style="margin-top:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:0">&#129463; Profesionales</div>
+      </div>
+      <div id="profesionales-list"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input class="form-control" id="prof-nuevo" placeholder="Nombre del profesional (ej. Lic. Pérez)" onkeydown="if(event.key==='Enter')guardarProfesional()">
+        <button class="btn btn-sm btn-primary" onclick="guardarProfesional()">Agregar</button>
+      </div>
+    </div>
   </div>
 
 </main>
@@ -450,11 +465,7 @@
     </div>
     <div class="form-group">
       <label>Profesional</label>
-      <select class="form-control" id="turno-prof">
-        <option>Lic. García</option>
-        <option>Lic. Romero</option>
-        <option>Lic. Paz</option>
-      </select>
+      <select class="form-control" id="turno-prof"><!-- se completa con los profesionales registrados --></select>
     </div>
     <div class="form-group">
       <label>Repetir en estos días <span style="color:var(--text-muted);font-weight:400">(opcional · misma hora)</span></label>
@@ -510,9 +521,7 @@
         </select>
       </div>
       <div class="form-group"><label>Profesional asignado</label>
-        <select class="form-control" id="pac-prof">
-          <option>Lic. García</option><option>Lic. Romero</option><option>Lic. Paz</option>
-        </select>
+        <select class="form-control" id="pac-prof"><!-- se completa con los profesionales registrados --></select>
       </div>
     </div>
     <div class="form-group"><label>Motivo de consulta</label><input class="form-control" id="pac-motivo" placeholder="¿Por qué consulta?"></div>
@@ -685,8 +694,12 @@
       <label>Concepto</label>
       <select class="form-control" id="tarifa-concepto">
         <option>Por sesión</option>
+        <option>Pack 4 sesiones</option>
         <option>Pack 5 sesiones</option>
+        <option>Pack 6 sesiones</option>
+        <option>Pack 8 sesiones</option>
         <option>Pack 10 sesiones</option>
+        <option>Pack 12 sesiones</option>
         <option>Pack 15 sesiones</option>
         <option>Pack 20 sesiones</option>
       </select>

@@ -77,7 +77,51 @@ async function startApp() {
   store.subscribeRealtime();
   applyRolePermissions();
   renderConnStatus();
+  renderSyncBanner();
   navigate('dashboard');
+}
+
+// Banner de sincronización: aviso fuerte cuando (a) no hay nube y los datos quedan
+// solo en este equipo, o (b) hay datos locales que se pueden subir a la nube.
+function renderSyncBanner() {
+  const b = document.getElementById('sync-banner');
+  if (!b) return;
+  if (store.sdkFailed) {
+    b.style.display = 'block';
+    b.style.background = '#fdecea'; b.style.color = '#a32219';
+    b.innerHTML = '⚠️ <strong>Sin conexión con la nube.</strong> Lo que cargues se guarda solo en este equipo y NO se sincroniza con los demás. Revisá tu conexión a internet y volvé a abrir la app. <button class="btn btn-sm" style="margin-left:8px" onclick="location.reload()">Reintentar</button>';
+  } else if (store.isCloud && store.localBackup && store.localBackupTotal > 0) {
+    const n = store.localBackupTotal;
+    b.style.display = 'block';
+    b.style.background = '#fff4e0'; b.style.color = '#8a5300';
+    b.innerHTML = `📤 Hay <strong>${n}</strong> registro${n !== 1 ? 's' : ''} guardado${n !== 1 ? 's' : ''} solo en este dispositivo (no están en la nube). <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="subirDatosLocales()">Subir a la nube ahora</button>`;
+  } else {
+    b.style.display = 'none';
+  }
+}
+
+async function subirDatosLocales() {
+  if (!store.localBackup) { renderSyncBanner(); return; }
+  const c = store.localBackupCounts || {};
+  const detalle = Object.entries(c).map(([k, v]) => `${v} ${k}`).join(', ');
+  if (!confirm(`¿Subir los datos de este dispositivo a la nube?\n\n(${detalle})\n\nSe agregan a lo que ya esté online. No se pisa ni se borra lo existente.`)) return;
+  const btn = document.querySelector('#sync-banner button'); if (btn) { btn.disabled = true; btn.textContent = 'Subiendo…'; }
+  let r;
+  try {
+    r = await store.pushLocalToCloud();
+  } catch (e) {
+    alert('Hubo un error al subir. Revisá la conexión y reintentá.\n' + ((e && e.message) || e));
+    renderSyncBanner();
+    return;
+  }
+  if (r.ok) {
+    alert(`Listo: se subieron ${r.subidos} registros a la nube. Ya los ven todos los dispositivos.`);
+    renderSyncBanner();
+    renderPage(state.currentPage);
+  } else {
+    alert('Algunos datos no se pudieron subir:\n' + (r.errores || []).join('\n') + '\n\nVolvé a intentar.');
+    renderSyncBanner();
+  }
 }
 
 // Páginas que sólo ve el admin (las dos secciones de plata).
@@ -100,9 +144,11 @@ function renderConnStatus() {
   if (!el) return;
   const modo = store.isCloud
     ? '<span class="conn-dot online"></span> Conectado'
-    : (store.cloudError
-        ? '<span class="conn-dot local"></span> Modo local · falta correr el schema'
-        : '<span class="conn-dot local"></span> Modo local');
+    : (store.sdkFailed
+        ? '<span class="conn-dot local"></span> ⚠️ Sin nube (datos solo en este equipo)'
+        : (store.cloudError
+            ? '<span class="conn-dot local"></span> Modo local · falta correr el schema'
+            : '<span class="conn-dot local"></span> Modo local'));
   const user = currentUser
     ? `<div class="conn-user">
          <span class="conn-user-name">👤 ${escapeHtml(currentUser.nombre)}</span>
@@ -315,7 +361,11 @@ function renderAgendaFiltros() {
 function populateAgendaProf() {
   const sel = document.getElementById('agenda-prof');
   if (!sel) return;
-  const profs = [...new Set([...state.turnos.map(t => t.prof), ...state.pacientes.map(p => p.prof)].filter(Boolean))].sort();
+  const profs = [...new Set([
+    ...profesionalesEfectivos(),
+    ...state.turnos.map(t => t.prof),
+    ...state.pacientes.map(p => p.prof),
+  ].filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Todos los profesionales</option>' + profs.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
   sel.value = filtroProf;
 }
@@ -934,6 +984,8 @@ function renderServicios() {
       </div>`;
   }).join('');
 
+  renderProfesionales();
+
   const tarifasList = document.getElementById('tarifas-list');
   if (state.tarifas.length === 0) {
     tarifasList.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Sin tarifas cargadas.</p>';
@@ -969,7 +1021,7 @@ function renderServicios() {
         </div>
         <div style="border-top:1px solid var(--border);padding:8px 14px;font-size:13px">
           ${(() => {
-            const packs = packsConPrecio();
+            const packs = packsConTarifaDirecta();
             if (!packs.length) return '<span style="color:var(--text-muted)">Cargá las tarifas (arriba) para ver el coseguro.</span>';
             return packs.map(p => `<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text-muted)">${p}</span><span>cubre ${ars(cubrePack(os, p))} · <strong style="color:var(--primary)">coseguro ${ars(coseguroPack(os, p))}</strong></span></div>`).join('');
           })()}
@@ -1085,6 +1137,79 @@ function populatePacienteSelects() {
   if (pagoSel) pagoSel.innerHTML = state.pacientes.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('');
   const osSelect = document.getElementById('pac-os-select');
   if (osSelect) osSelect.innerHTML = '<option value="">— Seleccionar —</option>' + state.obrasSociales.map(os => `<option value="${os.id}">${escapeHtml(os.nombre)}</option>`).join('');
+  populateProfSelects();
+}
+
+// ===== PROFESIONALES =====
+// Lista efectiva: los cargados por el centro, o (si no hay ninguno) los de ejemplo.
+function profesionalesEfectivos() {
+  const nombres = state.profesionales.map(p => p.nombre).filter(Boolean);
+  return nombres.length ? nombres : ['Lic. García', 'Lic. Romero', 'Lic. Paz'];
+}
+// Rellena un <select> de profesional con la lista efectiva. 'extra' suma (y selecciona)
+// un nombre puntual aunque no esté en la lista (ej. el profesional de un paciente que
+// se está editando y que ya fue borrado del listado).
+function fillProfSelect(sel, extra) {
+  if (!sel) return;
+  const set = new Set(profesionalesEfectivos());
+  if (extra) set.add(extra);
+  sel.innerHTML = [...set].map(n => `<option>${escapeHtml(n)}</option>`).join('');
+  if (extra) sel.value = extra;
+}
+function populateProfSelects() {
+  fillProfSelect(document.getElementById('turno-prof'));
+  fillProfSelect(document.getElementById('pac-prof'));
+}
+function renderProfesionales() {
+  const cont = document.getElementById('profesionales-list');
+  if (!cont) return;
+  const items = state.profesionales;
+  if (!items.length) {
+    cont.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Sin profesionales propios. Por ahora se usan los de ejemplo (Lic. García, Romero, Paz). Cargá los tuyos abajo y esos desaparecen solos.</p>';
+  } else {
+    cont.innerHTML = items.map(p => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg);border-radius:6px;margin-bottom:4px">
+        <span style="font-size:13px">${escapeHtml(p.nombre)}</span>
+        <button onclick="eliminarProfesional('${p.id}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px">✕</button>
+      </div>`).join('');
+  }
+}
+async function guardarProfesional() {
+  const inp = document.getElementById('prof-nuevo');
+  const nombre = (inp.value || '').trim();
+  if (!nombre) { alert('Escribí el nombre del profesional'); return; }
+  // La tabla 'profesionales' es nueva: si no se corrió la migración, avisamos en vez de
+  // "guardar" algo que se perdería en silencio al recargar.
+  if (store.isCloud && store.missingTables && store.missingTables.has('profesionales')) {
+    alert('Para gestionar profesionales falta correr una migración en Supabase:\nsupabase/migracion-profesionales.sql\n\nHasta entonces no se pueden guardar.');
+    return;
+  }
+  if (state.profesionales.some(p => (p.nombre || '').toLowerCase() === nombre.toLowerCase())) {
+    alert('Ese profesional ya está cargado'); return;
+  }
+  await store.add('profesionales', { nombre });
+  if (store.lastWriteError) {
+    store.lastWriteError = null;
+    // El alta optimista no persistió: la sacamos del cache para no mostrar un fantasma.
+    const i = state.profesionales.findIndex(p => (p.nombre || '').toLowerCase() === nombre.toLowerCase());
+    if (i >= 0) state.profesionales.splice(i, 1);
+    alert('No se pudo guardar el profesional (revisá la conexión). Reintentá.');
+    renderProfesionales();
+    return;
+  }
+  inp.value = '';
+  renderProfesionales();
+  populateProfSelects();
+  populateAgendaProf();
+}
+async function eliminarProfesional(id) {
+  const p = state.profesionales.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`¿Eliminar al profesional "${p.nombre}"?\n(No borra sus turnos ni pacientes, solo lo saca del listado.)`)) return;
+  await store.remove('profesionales', id);
+  renderProfesionales();
+  populateProfSelects();
+  populateAgendaProf();
 }
 
 function onCoberturaChange() {
@@ -1094,7 +1219,7 @@ function onCoberturaChange() {
   const hint = document.getElementById('pac-particular-hint');
   if (hint) hint.style.display = esOS ? 'none' : 'block';
 }
-const PACKS = ['Por sesión', 'Pack 5 sesiones', 'Pack 10 sesiones', 'Pack 15 sesiones', 'Pack 20 sesiones'];
+const PACKS = ['Por sesión', 'Pack 4 sesiones', 'Pack 5 sesiones', 'Pack 6 sesiones', 'Pack 8 sesiones', 'Pack 10 sesiones', 'Pack 12 sesiones', 'Pack 15 sesiones', 'Pack 20 sesiones'];
 const OS_CUBRE_FIELDS = [
   ['os-cubre-sesion', 'Por sesión'], ['os-cubre-5', 'Pack 5 sesiones'], ['os-cubre-10', 'Pack 10 sesiones'],
   ['os-cubre-15', 'Pack 15 sesiones'], ['os-cubre-20', 'Pack 20 sesiones'],
@@ -1106,7 +1231,7 @@ function tarifaDePack(concepto, servicio) {
   if (servicio) { const m = matches.find(t => t.servicio === servicio); if (m) return m.monto || 0; }
   return matches[0]?.monto || 0;
 }
-const PACK_SESIONES = { 'Por sesión': 1, 'Pack 5 sesiones': 5, 'Pack 10 sesiones': 10, 'Pack 15 sesiones': 15, 'Pack 20 sesiones': 20 };
+const PACK_SESIONES = { 'Por sesión': 1, 'Pack 4 sesiones': 4, 'Pack 5 sesiones': 5, 'Pack 6 sesiones': 6, 'Pack 8 sesiones': 8, 'Pack 10 sesiones': 10, 'Pack 12 sesiones': 12, 'Pack 15 sesiones': 15, 'Pack 20 sesiones': 20 };
 // Precio del pack: tarifa directa, o (tarifa por sesión × N) si no cargaron la del pack.
 function precioPack(concepto, servicio) {
   const directo = tarifaDePack(concepto, servicio);
@@ -1127,13 +1252,18 @@ function coseguroPack(os, concepto, servicio) {
 function packsConPrecio(servicio) {
   return PACKS.filter(p => precioPack(p, servicio) > 0);
 }
+// Packs con tarifa DIRECTA cargada (no derivada). Para la card/preview de OS, así no
+// se listan los 9 packs derivados cuando sólo hay una tarifa "Por sesión".
+function packsConTarifaDirecta(servicio) {
+  return PACKS.filter(p => tarifaDePack(p, servicio) > 0);
+}
 function leerCubreOS() {
   const cubre = {};
   OS_CUBRE_FIELDS.forEach(([id, pack]) => { cubre[pack] = parseInt(document.getElementById(id).value) || 0; });
   return cubre;
 }
 function packDeSesiones(n) {
-  return ({ 5: 'Pack 5 sesiones', 10: 'Pack 10 sesiones', 15: 'Pack 15 sesiones', 20: 'Pack 20 sesiones' })[n] || null;
+  return ({ 4: 'Pack 4 sesiones', 5: 'Pack 5 sesiones', 6: 'Pack 6 sesiones', 8: 'Pack 8 sesiones', 10: 'Pack 10 sesiones', 12: 'Pack 12 sesiones', 15: 'Pack 15 sesiones', 20: 'Pack 20 sesiones' })[n] || null;
 }
 
 // Preview en vivo: coseguro (tarifa − cubre) por cada pack que tenga tarifa cargada.
@@ -1142,7 +1272,7 @@ function updateCoseguroPreview() {
   const box = document.getElementById('os-coseguro-preview');
   const rowsEl = document.getElementById('os-coseguro-rows');
   if (!box || !rowsEl) return;
-  const packs = packsConPrecio();
+  const packs = packsConTarifaDirecta();
   if (!packs.length) {
     rowsEl.innerHTML = '<span style="color:var(--text-muted)">Cargá primero las tarifas (Servicios → Tarifas) para que el coseguro se calcule solo.</span>';
   } else {
@@ -1478,7 +1608,9 @@ function fillPacienteForm(p) {
   set('pac-antecedentes', p.antecedentes); set('pac-evaluacion', p.evaluacion);
   set('pac-objetivo', p.objetivo); set('pac-etapa', p.etapaActual || deducirEtapaPaciente(p));
   set('pac-plan', p.planRehab); set('pac-progresion', p.progresion);
-  set('pac-observaciones', p.observaciones); set('pac-prof', p.prof);
+  set('pac-observaciones', p.observaciones);
+  const profSel = document.getElementById('pac-prof');
+  if (profSel) { fillProfSelect(profSel, p.prof); profSel.value = p.prof || ''; }
   set('pac-cobertura', p.tipoCobertura || 'particular');
   onCoberturaChange();
   set('pac-os-select', p.obraSocialId || '');
