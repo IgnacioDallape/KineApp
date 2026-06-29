@@ -74,19 +74,16 @@
     </div>
     <div class="grid-3" style="margin-bottom:20px">
       <div class="stat-card">
-        <div class="stat-num" style="color:var(--primary)" id="stat-hoy">8</div>
+        <div class="stat-num" style="color:var(--primary)" id="stat-hoy">0</div>
         <div class="stat-label">Turnos hoy</div>
-        <div class="stat-trend up">&#8599; 2 más que ayer</div>
       </div>
       <div class="stat-card">
-        <div class="stat-num" style="color:var(--green)" id="stat-pac">47</div>
+        <div class="stat-num" style="color:var(--green)" id="stat-pac">0</div>
         <div class="stat-label">Pacientes activos</div>
-        <div class="stat-trend up">&#8599; 3 este mes</div>
       </div>
       <div class="stat-card" id="card-pend">
-        <div class="stat-num" style="color:var(--orange)" id="stat-pend">3</div>
+        <div class="stat-num" style="color:var(--orange)" id="stat-pend">0</div>
         <div class="stat-label">Pagos pendientes</div>
-        <div class="stat-trend down">&#8593; revisar</div>
       </div>
     </div>
     <div id="alertas-sesiones-dash" style="display:none;margin-bottom:16px"></div>
@@ -143,13 +140,8 @@
         <select class="form-control" id="pac-filtro-prof" style="width:170px" onchange="filtrarPorProf(this.value)">
           <option value="">Todos los profesionales</option>
         </select>
-        <select class="form-control" style="width:160px" onchange="filtrarPorServicio(this.value)">
+        <select class="form-control" id="pac-filtro-serv" style="width:160px" onchange="filtrarPorServicio(this.value)">
           <option value="">Todos los servicios</option>
-          <option>Rehabilitación</option>
-          <option>Readaptación</option>
-          <option>Pilates</option>
-          <option>Recovery</option>
-          <option>Entrenamiento funcional</option>
         </select>
       </div>
     </div>
@@ -464,13 +456,7 @@
       </div>
       <div class="form-group">
         <label>Servicio</label>
-        <select class="form-control" id="turno-servicio">
-          <option>Rehabilitación</option>
-          <option>Readaptación</option>
-          <option>Pilates</option>
-          <option>Recovery</option>
-          <option>Entrenamiento funcional</option>
-        </select>
+        <select class="form-control" id="turno-servicio"><!-- se completa con los servicios reales --></select>
       </div>
     </div>
     <div class="form-group">
@@ -526,9 +512,7 @@
     </div>
     <div class="grid-2">
       <div class="form-group"><label>Servicio</label>
-        <select class="form-control" id="pac-servicio">
-          <option>Rehabilitación</option><option>Readaptación</option><option>Pilates</option><option>Recovery</option><option>Entrenamiento funcional</option>
-        </select>
+        <select class="form-control" id="pac-servicio"><!-- se completa con los servicios reales --></select>
       </div>
       <div class="form-group"><label>Profesional asignado</label>
         <select class="form-control" id="pac-prof"><!-- se completa con los profesionales registrados --></select>
@@ -710,10 +694,7 @@
     </div>
     <div class="form-group">
       <label>Servicio</label>
-      <select class="form-control" id="tarifa-serv">
-        <option>Rehabilitación</option><option>Readaptación</option>
-        <option>Pilates</option><option>Recovery</option><option>Entrenamiento funcional</option>
-      </select>
+      <select class="form-control" id="tarifa-serv"><!-- se completa con los servicios reales --></select>
     </div>
     <div class="form-group">
       <label>Concepto</label>
@@ -748,7 +729,7 @@
     </div>
     <div class="form-group">
       <label>Nombre de la obra social</label>
-      <input class="form-control" id="os-nombre" placeholder="OSDE">
+      <input class="form-control" id="os-nombre" placeholder="Nombre de la obra social">
     </div>
     <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">¿Cuánto te cubre? <span style="font-weight:400;text-transform:none">($ que paga la obra social)</span></label>
     <div class="grid-3">

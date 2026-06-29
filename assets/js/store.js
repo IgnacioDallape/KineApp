@@ -559,82 +559,12 @@
       if (this.onChange) this.onChange(key);
     },
 
-    // ---------- seed modo local ----------
+    // ---------- modo local SIN datos de ejemplo ----------
+    // (Antes había pacientes/obras sociales/turnos/gastos de muestra. Se quitaron: la app
+    //  arranca vacía y sólo muestra datos reales cargados por el centro.)
     _seedLocal() {
-      const OS = [
-        ['OSDE', 'Rehabilitación, Pilates', '0800-555-6733', { 'Por sesión': 4000, 'Pack 10 sesiones': 40000 }],
-        ['Swiss Medical', 'Rehabilitación', '0810-888-7946', { 'Por sesión': 3500, 'Pack 10 sesiones': 35000 }],
-        ['Medifé', 'Rehabilitación, Readaptación', '0810-555-6334', { 'Por sesión': 3800, 'Pack 10 sesiones': 38000 }],
-        ['Galeno', 'Rehabilitación', '0800-222-6200', { 'Por sesión': 3200, 'Pack 10 sesiones': 32000 }],
-      ].map(([nombre, servicios, contacto, cubre]) => ({ id: uuid(), nombre, servicios, contacto, cubre }));
-
-      this.state.obrasSociales = OS;
-      this.state.servicios = [
-        ['Rehabilitación', 'Tratamiento kinesiológico de lesiones', '🦴', 'blue'],
-        ['Readaptación', 'Vuelta al deporte post-lesión', '🏃', 'teal'],
-        ['Entrenamiento funcional', 'Acondicionamiento físico especializado', '💪', 'green'],
-        ['Pilates', 'Pilates clínico y terapéutico', '🧘', 'purple'],
-        ['Recovery', 'Presoterapia, crioterapia y más', '❄️', 'orange'],
-      ].map(([nombre, desc, icono, color]) => ({ id: uuid(), nombre, desc, icono, color }));
-
-      this.state.pacientes = [
-        { nombre: 'Martina López', tel: '261-555-1234', deporte: 'Running', servicio: 'Rehabilitación', motivo: 'Dolor rodilla', lesion: 'Condromalacia rotuliana', prof: 'Lic. García', sesiones: 12, sesionesAuth: 15, deuda: 0, estado: 'pagado', tipoCobertura: 'obra_social', obraSocialId: OS[0].id },
-        { nombre: 'Carlos Herrera', tel: '261-555-5678', deporte: 'Fútbol', servicio: 'Readaptación', motivo: 'Post-cirugía', lesion: 'Rotura LCA', prof: 'Lic. Romero', sesiones: 8, sesionesAuth: 20, deuda: 15000, estado: 'pendiente', tipoCobertura: 'particular', obraSocialId: null },
-        { nombre: 'Sofía Mendez', tel: '261-555-9012', deporte: 'Pilates', servicio: 'Pilates', motivo: 'Fortalecimiento', lesion: 'Lumbalgia crónica', prof: 'Lic. Paz', sesiones: 20, sesionesAuth: null, deuda: 0, estado: 'pagado', tipoCobertura: 'obra_social', obraSocialId: OS[1].id },
-        { nombre: 'Diego Ramos', tel: '261-555-3456', deporte: 'Natación', servicio: 'Recovery', motivo: 'Recuperación', lesion: 'Tendinitis hombro', prof: 'Lic. García', sesiones: 5, sesionesAuth: 10, deuda: 8000, estado: 'pendiente', tipoCobertura: 'particular', obraSocialId: null },
-        { nombre: 'Ana Torres', tel: '261-555-7890', deporte: 'Vóley', servicio: 'Rehabilitación', motivo: 'Dolor tobillo', lesion: 'Esguince grado II', prof: 'Lic. Romero', sesiones: 3, sesionesAuth: 10, deuda: 0, estado: 'pagado', tipoCobertura: 'obra_social', obraSocialId: OS[2].id },
-        { nombre: 'Lucas Gómez', tel: '261-555-2345', deporte: 'Ciclismo', servicio: 'Entrenamiento funcional', motivo: 'Rendimiento', lesion: '—', prof: 'Lic. Paz', sesiones: 15, sesionesAuth: null, deuda: 0, estado: 'pagado', tipoCobertura: 'particular', obraSocialId: null },
-      ].map((p, i) => ({ id: uuid(), dni: String(30100000 + i * 234567), email: '', edad: '', antecedentes: '', evaluacion: '', objetivo: '', etapaActual: '', planRehab: '', progresion: '', observaciones: '', totalPagar: 0, fotoMedico: null, ...p }));
-
-      this.state.tarifas = [
-        ['Rehabilitación', 'Sesión individual', 5000],
-        ['Rehabilitación', 'Pack 10 sesiones', 45000],
-        ['Pilates', 'Sesión individual', 4000],
-        ['Pilates', 'Pack mensual (8 sesiones)', 28000],
-        ['Recovery', 'Presoterapia (30 min)', 6000],
-        ['Readaptación', 'Sesión individual', 5500],
-        ['Entrenamiento funcional', 'Sesión individual', 4500],
-      ].map(([servicio, concepto, monto]) => ({ id: uuid(), servicio, concepto, monto }));
-
-      const fechaRel = d => { const x = new Date(); x.setDate(x.getDate() + d); return x.toISOString().split('T')[0]; };
-      this.state.gastos = [
-        ['Alquiler local', 'Infraestructura', 180000, 5, true],
-        ['Luz', 'Servicios', 28000, 10, true],
-        ['Internet', 'Servicios', 12000, 15, false],
-        ['Sueldo Lic. García', 'Sueldos', 250000, 12, false],
-        ['Sueldo Lic. Romero', 'Sueldos', 230000, 12, false],
-        ['Sueldo Lic. Paz', 'Sueldos', 220000, 12, false],
-        ['Insumos y materiales', 'Insumos', 35000, 8, true],
-        ['Seguro del local', 'Infraestructura', 18000, 3, true],
-      ].map(([concepto, categoria, monto, dv, pagado]) => ({ id: uuid(), concepto, categoria, monto, vencimiento: fechaRel(dv), pagado }));
-
-      this.state.turnos = this._seedTurnos();
+      for (const key of Object.keys(TABLES)) this.state[key] = [];
       this._persistLocal();
-    },
-
-    _seedTurnos() {
-      const pacs = this.state.pacientes;
-      const servs = ['rehab', 'gym', 'pilates', 'recovery', 'rehab', 'gym'];
-      const servName = ['Rehabilitación', 'Readaptación', 'Pilates', 'Recovery'];
-      const horas = ['09:00', '09:45', '10:30', '11:15', '14:00', '15:00', '16:00', '17:00'];
-      const hoy = new Date();
-      const turnos = [];
-      for (let d = -1; d <= 5; d++) {
-        const fecha = new Date(hoy); fecha.setDate(hoy.getDate() + d);
-        if (fecha.getDay() === 0) continue;
-        const fechaStr = fecha.toISOString().split('T')[0];
-        const qty = Math.floor(Math.random() * 4) + 3;
-        for (let i = 0; i < qty; i++) {
-          const p = pacs[i % pacs.length];
-          turnos.push({
-            id: uuid(), pacienteId: p.id, paciente: p.nombre, fecha: fechaStr,
-            hora: horas[i % horas.length], duracion: [30, 45, 60][i % 3],
-            servicio: servName[i % servName.length], servClass: servs[i % servs.length],
-            prof: p.prof, asistencia: null,
-          });
-        }
-      }
-      return turnos;
     },
   };
 

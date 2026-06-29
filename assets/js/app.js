@@ -546,10 +546,11 @@ function pacientesFiltrados() {
 }
 
 function renderPacientes() {
-  // Combo "filtrar por profesional" (dinámico según los pacientes cargados).
+  populateServicioSelects();   // filtro de servicios con datos reales
+  // Combo "filtrar por profesional": sólo los registrados en Supabase.
   const profSel = document.getElementById('pac-filtro-prof');
   if (profSel) {
-    const profs = [...new Set(state.pacientes.map(p => p.prof).filter(Boolean))].sort();
+    const profs = [...new Set(profesionalesEfectivos())].sort();
     profSel.innerHTML = '<option value="">Todos los profesionales</option>' + profs.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
     profSel.value = pacProfFiltro;
   }
@@ -1239,6 +1240,27 @@ function toggleServicioPac(id) {
 }
 
 // ===== SELECTS / MODALES =====
+// Llena los <select> de "elegir servicio" (turno, paciente, tarifa) y el filtro de
+// pacientes con los servicios REALES cargados por el centro (no una lista fija).
+function populateServicioSelects() {
+  const nombres = state.servicios.map(s => s.nombre).filter(Boolean);
+  const opts = nombres.map(n => `<option>${escapeHtml(n)}</option>`).join('');
+  const ph = '<option value="">— Cargá servicios en la sección Servicios —</option>';
+  ['turno-servicio', 'pac-servicio', 'tarifa-serv'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = opts || ph;
+    if (prev && nombres.includes(prev)) sel.value = prev;
+  });
+  const filtro = document.getElementById('pac-filtro-serv');
+  if (filtro) {
+    const prev = filtro.value;
+    filtro.innerHTML = '<option value="">Todos los servicios</option>' + opts;
+    filtro.value = prev;
+  }
+}
+
 function populatePacienteSelects() {
   const turnoSel = document.getElementById('turno-paciente');
   if (turnoSel) {
@@ -1252,6 +1274,7 @@ function populatePacienteSelects() {
   const osSelect = document.getElementById('pac-os-select');
   if (osSelect) osSelect.innerHTML = '<option value="">— Seleccionar —</option>' + state.obrasSociales.map(os => `<option value="${os.id}">${escapeHtml(os.nombre)}</option>`).join('');
   populateProfSelects();
+  populateServicioSelects();
 }
 
 // ===== PROFESIONALES =====
@@ -1282,7 +1305,7 @@ function renderProfesionales() {
   if (!cont) return;
   const items = state.profesionales;
   if (!items.length) {
-    cont.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Sin profesionales propios. Por ahora se usan los de ejemplo (Lic. García, Romero, Paz). Cargá los tuyos abajo y esos desaparecen solos.</p>';
+    cont.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Todavía no cargaste profesionales. Agregá los del centro abajo para poder asignarlos a turnos y pacientes.</p>';
   } else {
     cont.innerHTML = items.map(p => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg);border-radius:6px;margin-bottom:4px">
@@ -1720,7 +1743,13 @@ function imprimirFicha(id) {
 function fillPacienteForm(p) {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
   set('pac-nombre', p.nombre); set('pac-dni', p.dni); set('pac-tel', p.tel); set('pac-email', p.email);
-  set('pac-edad', p.edad); set('pac-deporte', p.deporte); set('pac-servicio', p.servicio);
+  set('pac-edad', p.edad); set('pac-deporte', p.deporte);
+  // El servicio del paciente debe verse aunque ya no esté en la lista actual.
+  const servSel = document.getElementById('pac-servicio');
+  if (servSel && p.servicio && ![...servSel.options].some(o => o.value === p.servicio || o.textContent === p.servicio)) {
+    servSel.insertAdjacentHTML('afterbegin', `<option>${escapeHtml(p.servicio)}</option>`);
+  }
+  set('pac-servicio', p.servicio);
   set('pac-motivo', p.motivo); set('pac-lesion', p.lesion);
   set('pac-antecedentes', p.antecedentes); set('pac-evaluacion', p.evaluacion);
   set('pac-objetivo', p.objetivo); set('pac-etapa', p.etapaActual || deducirEtapaPaciente(p));
