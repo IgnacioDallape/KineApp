@@ -588,6 +588,7 @@ function renderPacientes() {
         : `<span style="font-weight:600">${p.sesiones}</span>`}</td>
       <td><span class="badge ${p.deuda > 0 ? 'badge-red' : 'badge-green'}">${p.deuda > 0 ? 'Debe ' + ars(p.deuda) : 'Al día'}</span></td>
       <td style="display:flex;gap:6px">
+        <button class="btn btn-sm" style="background:var(--green);color:#fff" onclick="enviarTurnosWpp('${p.id}')" title="Enviar turnos agendados por WhatsApp">📲</button>
         <button class="btn btn-sm btn-secondary" onclick="verPaciente('${p.id}')">Ver ficha</button>
         <button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmarBorrarPaciente('${p.id}')">✕</button>
       </td>
@@ -622,6 +623,7 @@ function renderPacientes() {
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span class="badge ${p.deuda > 0 ? 'badge-red' : 'badge-green'}">${p.deuda > 0 ? 'Debe ' + ars(p.deuda) : 'Al día'}</span>
             <div class="pac-card-actions">
+              <button class="btn btn-sm" style="background:var(--green);color:#fff" onclick="enviarTurnosWpp('${p.id}')">📲 Turnos</button>
               <button class="btn btn-sm btn-secondary" onclick="verPaciente('${p.id}')">Ver ficha</button>
               <button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmarBorrarPaciente('${p.id}')">✕ Borrar</button>
             </div>
@@ -945,6 +947,23 @@ function enviarRecordatorioWpp(turnoId) {
     .replace(/{fecha}/g, formatFechaLarga(t.fecha))
     .replace(/{hora}/g, t.hora)
     .replace(/{profesional}/g, t.prof || '');
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// Manda al paciente, por WhatsApp, TODOS sus turnos agendados a futuro (fecha + hora).
+function enviarTurnosWpp(pacId) {
+  const p = store.pacienteById(pacId);
+  if (!p) return;
+  const tel = telWhatsApp(p.tel);
+  if (!tel) { alert('Este paciente no tiene teléfono cargado.\nAgregalo en la ficha para poder enviarle los turnos.'); return; }
+  const hoy = ymd(new Date());
+  const turnos = store.turnosDePaciente(pacId)
+    .filter(t => t.fecha >= hoy)
+    .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+  if (!turnos.length) { alert(`${p.nombre} no tiene turnos agendados a futuro.`); return; }
+  const lista = turnos.map(t => `• ${formatFechaLarga(t.fecha)} a las ${t.hora} hs`).join('\n');
+  const nombre = (p.nombre || '').split(' ')[0];
+  const msg = `Hola ${nombre}, te paso tus turnos agendados:\n\n${lista}\n\n¡Te esperamos!`;
   window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
