@@ -1552,11 +1552,10 @@ async function guardarTurno() {
     if (cupo <= 0) { mostrarBloqueado(pacObj, usados); return; }
   }
 
-  const ocupados = [], sinCupo = [];
+  // Se permiten varios turnos en el mismo horario (no se bloquea por "horario ocupado").
+  const sinCupo = [];
   let creados = 0;
   for (const fecha of fechas) {
-    // Horario ocupado: el mismo profesional ya tiene un turno a esa fecha y hora.
-    if (state.turnos.some(t => t.fecha === fecha && t.hora === hora && t.prof === prof)) { ocupados.push(fecha); continue; }
     if (creados >= cupo) { sinCupo.push(fecha); continue; }
     await store.add('turnos', {
       pacienteId: pacObj.id, paciente: pacObj.nombre, fecha, hora, duracion,
@@ -1568,9 +1567,8 @@ async function guardarTurno() {
   closeModal('modal-turno');
   resetTurnoForm();
 
-  if (fechas.length > 1 || ocupados.length || sinCupo.length) {
+  if (fechas.length > 1 || sinCupo.length) {
     let msg = `Se agendaron ${creados} turno${creados !== 1 ? 's' : ''}.`;
-    if (ocupados.length) msg += `\n\n⚠️ ${prof} ya tenía turno (horario ocupado) en:\n${ocupados.join(', ')}`;
     if (sinCupo.length) msg += `\n\n⚠️ Sin sesiones autorizadas disponibles para:\n${sinCupo.join(', ')}`;
     alert(msg);
   }
