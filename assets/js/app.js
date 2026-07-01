@@ -382,7 +382,8 @@ function renderAgenda() {
       t.fecha === fechaStr &&
       parseInt(t.hora.split(':')[0]) === horaH &&
       (!filtroActividad || t.servicio === filtroActividad) &&
-      (!filtroProf || t.prof === filtroProf));
+      (!filtroProf || t.prof === filtroProf))
+      .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));   // ordenados por hora
     return slotTurnos.map(t => `
       <div class="turno ${t.servClass}" onclick="event.stopPropagation();mostrarTurno('${t.id}')" title="${escapeHtml(t.paciente)} · ${t.hora}">
         <span class="turno-hora">${t.hora}</span>
