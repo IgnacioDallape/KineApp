@@ -189,7 +189,7 @@
   <div class="page" id="page-pagos">
     <div class="page-header">
       <div><h2>Gastos del centro</h2><p>Tildá lo que pagaste este mes</p></div>
-      <button class="btn btn-primary" onclick="openModal('modal-gasto')">+ Agregar gasto</button>
+      <button class="btn btn-primary" onclick="nuevoGasto()">+ Agregar gasto</button>
     </div>
 
     <div class="grid-3" style="margin-bottom:20px">
@@ -816,7 +816,7 @@
 <div class="modal-overlay" id="modal-gasto">
   <div class="modal" style="width:420px">
     <div class="modal-header">
-      <h3>Nuevo gasto</h3>
+      <h3 id="gasto-modal-title">Nuevo gasto</h3>
       <button class="modal-close" onclick="closeModal('modal-gasto')">✕</button>
     </div>
     <div class="form-group">

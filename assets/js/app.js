@@ -789,7 +789,10 @@ function renderPagos() {
             </div>
             <div style="text-align:right">
               <div style="font-weight:700;font-size:15px;${g.pagado ? 'color:var(--text-muted)' : vencido ? 'color:var(--red)' : 'color:var(--text)'}">${g.pagado ? '' : '-'}${ars(g.monto)}</div>
-              <button onclick="event.stopPropagation();eliminarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:11px;margin-top:2px">Eliminar</button>
+              <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:2px">
+                <button onclick="event.stopPropagation();editarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:11px">Editar</button>
+                <button onclick="event.stopPropagation();eliminarGasto('${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:11px">Eliminar</button>
+              </div>
             </div>
           </div>`;
       }).join('')}
@@ -801,16 +804,46 @@ async function toggleGasto(id) {
   if (g) await store.update('gastos', id, { pagado: !g.pagado });
   renderPagos();
 }
+let editingGastoId = null;   // null = alta; id = edición de ese gasto
+
+// Abrir el modal para un gasto NUEVO (limpio).
+function nuevoGasto() {
+  editingGastoId = null;
+  document.getElementById('gasto-concepto').value = '';
+  document.getElementById('gasto-categoria').value = 'Sueldos';
+  document.getElementById('gasto-monto').value = '';
+  document.getElementById('gasto-vencimiento').value = '';
+  document.getElementById('gasto-estado').value = 'false';
+  const t = document.getElementById('gasto-modal-title'); if (t) t.textContent = 'Nuevo gasto';
+  document.getElementById('modal-gasto').classList.add('open');
+}
+
+// Abrir el modal precargado para EDITAR un gasto (cambiar monto, concepto, etc.).
+function editarGasto(id) {
+  const g = state.gastos.find(x => x.id === id);
+  if (!g) return;
+  editingGastoId = id;
+  document.getElementById('gasto-concepto').value = g.concepto || '';
+  document.getElementById('gasto-categoria').value = g.categoria || 'Otros';
+  document.getElementById('gasto-monto').value = g.monto ?? '';
+  document.getElementById('gasto-vencimiento').value = g.vencimiento || '';
+  document.getElementById('gasto-estado').value = g.pagado ? 'true' : 'false';
+  const t = document.getElementById('gasto-modal-title'); if (t) t.textContent = 'Editar gasto';
+  document.getElementById('modal-gasto').classList.add('open');
+}
+
 async function guardarGasto() {
   const concepto = document.getElementById('gasto-concepto').value.trim();
   if (!concepto) { alert('Ingresá el concepto'); return; }
-  await store.add('gastos', {
+  const campos = {
     concepto,
     categoria: document.getElementById('gasto-categoria').value,
     monto: parseInt(document.getElementById('gasto-monto').value) || 0,
     vencimiento: document.getElementById('gasto-vencimiento').value || null,
     pagado: document.getElementById('gasto-estado').value === 'true'
-  });
+  };
+  if (editingGastoId) { await store.update('gastos', editingGastoId, campos); editingGastoId = null; }
+  else { await store.add('gastos', campos); }
   document.getElementById('gasto-concepto').value = '';
   document.getElementById('gasto-monto').value = '';
   closeModal('modal-gasto');
