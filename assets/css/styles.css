@@ -391,7 +391,9 @@
   @media (max-width: 900px) {
     .sidebar { display: none; }
     .bottom-nav { display: block; }
-    .main { margin-left: 0; padding: 16px 14px 88px; }
+    /* padding-top con safe-area para no solaparse con la barra de estado de iOS
+       (hora/wifi/batería) en iPhone con notch. Afecta el header de todas las secciones. */
+    .main { margin-left: 0; padding: calc(16px + env(safe-area-inset-top)) 14px 88px; }
     .grid-4 { grid-template-columns: 1fr 1fr; }
     .grid-3 { grid-template-columns: 1fr; }
     .grid-2 { grid-template-columns: 1fr; }
