@@ -1831,6 +1831,11 @@ function fillPacienteForm(p) {
   set('pac-sesiones-auth', p.sesionesAuth ?? '');
   onObrasSocialChange(); // recién acá: ya están seteados servicio, OS y sesiones reales
   set('pac-total-pagar', p.totalPagar ?? ''); // pisa la sugerencia con el total guardado
+  // Seguimiento editable (solo al editar): sesiones realizadas y deuda, corregibles a mano.
+  set('pac-sesiones-realizadas', p.sesiones ?? 0);
+  set('pac-deuda', p.deuda ?? 0);
+  const segEdit = document.getElementById('pac-seguimiento-edit');
+  if (segEdit) segEdit.style.display = 'block';
   if (p.fotoMedico && p.fotoMedico.src) {
     const esImg = p.fotoMedico.src.startsWith('data:image');
     document.getElementById('pac-foto-img').src = p.fotoMedico.src;
@@ -1847,8 +1852,10 @@ function fillPacienteForm(p) {
 function resetPacienteForm() {
   ['pac-nombre', 'pac-dni', 'pac-tel', 'pac-email', 'pac-edad', 'pac-deporte', 'pac-motivo', 'pac-lesion',
     'pac-antecedentes', 'pac-evaluacion', 'pac-objetivo', 'pac-plan', 'pac-progresion', 'pac-observaciones',
-    'pac-sesiones-auth', 'pac-total-pagar']
+    'pac-sesiones-auth', 'pac-total-pagar', 'pac-sesiones-realizadas', 'pac-deuda']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const segEdit = document.getElementById('pac-seguimiento-edit');
+  if (segEdit) segEdit.style.display = 'none';   // seguimiento editable solo al EDITAR
   document.getElementById('pac-servicio').selectedIndex = 0;
   document.getElementById('pac-etapa').selectedIndex = 0;
   document.getElementById('pac-prof').selectedIndex = 0;
@@ -1897,7 +1904,12 @@ async function guardarPaciente() {
 
   let createdId = null;
   if (editingPacienteId) {
-    // Edición: merge sobre el existente (preserva sesiones/deuda, que se manejan aparte).
+    // Edición: se puede corregir TODO a mano, incluidas sesiones realizadas y deuda.
+    const sesRealizadas = parseInt(document.getElementById('pac-sesiones-realizadas').value) || 0;
+    const deudaEdit = parseInt(document.getElementById('pac-deuda').value) || 0;
+    campos.sesiones = sesRealizadas;
+    campos.deuda = deudaEdit;
+    campos.estado = deudaEdit > 0 ? 'pendiente' : 'pagado';
     await store.update('pacientes', editingPacienteId, campos);
     editingPacienteId = null;
   } else {
