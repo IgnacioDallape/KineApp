@@ -53,6 +53,7 @@
   </nav>
   <div class="sidebar-footer">
     <div id="conn-status" class="conn-status"><span class="conn-dot local"></span> Iniciando…</div>
+    <button class="btn-actualizar" onclick="actualizarApp()" style="margin-top:8px;width:100%;padding:7px;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:var(--radius);background:var(--white);color:var(--primary);cursor:pointer">&#128260; Actualizar app</button>
     <div style="margin-top:6px;opacity:.7">v2.0 · 2026</div>
   </div>
 </aside>
@@ -416,6 +417,7 @@
   <div id="mas-cobranzas" onclick="navigate('cobranzas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128176; Cobranzas</div>
   <div onclick="navigate('recordatorios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128276; Recordatorios</div>
   <div onclick="navigate('servicios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#9881;&#65039; Servicios</div>
+  <div class="btn-actualizar" onclick="actualizarApp()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;color:var(--primary);border-bottom:1px solid var(--border)">&#128260; Actualizar app</div>
   <div onclick="doLogout()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:600;color:var(--red)">&#128682; Cerrar sesión</div>
 </div>
 

@@ -139,6 +139,23 @@ function applyRolePermissions() {
   });
 }
 
+// Fuerza a bajar la ÚLTIMA versión: desregistra el service worker, limpia la caché del
+// PWA y recarga desde la red. Útil cuando una actualización tarda en impactar en el equipo.
+async function actualizarApp() {
+  document.querySelectorAll('.btn-actualizar').forEach(b => { b.textContent = 'Actualizando…'; b.style.pointerEvents = 'none'; });
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) await r.unregister();
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      for (const k of keys) await caches.delete(k);
+    }
+  } catch (_) { /* seguimos igual */ }
+  setTimeout(() => location.reload(), 150);
+}
+
 function renderConnStatus() {
   const el = document.getElementById('conn-status');
   if (!el) return;
