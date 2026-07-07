@@ -484,6 +484,7 @@ function mostrarTurno(id) {
       <button class="btn btn-sm btn-success" onclick="marcarTurnoAsist('${t.id}','asistio')">✅ Asistió</button>
       <button class="btn btn-sm btn-danger" onclick="marcarTurnoAsist('${t.id}','ausente')">❌ Ausente</button>
       <button class="btn btn-sm btn-secondary" onclick="marcarTurnoAsist('${t.id}','reprog')">🔄 Reprogramar</button>
+      <button class="btn btn-sm btn-primary" onclick="editarTurno('${t.id}')">✏️ Editar</button>
       <button class="btn btn-sm btn-secondary" onclick="eliminarTurno('${t.id}')" style="margin-left:auto;color:var(--red)">Eliminar</button>
     </div>`;
   openModal('modal-turno-detalle');
@@ -1557,11 +1558,39 @@ function toggleDia(btn) {
   const hay = document.querySelectorAll('#turno-dias .dia-btn.active').length > 0;
   document.getElementById('turno-repetir-extra').style.display = hay ? 'block' : 'none';
 }
+let editingTurnoId = null;   // null = turno nuevo; id = edición de ese turno
+
 function resetTurnoForm() {
+  editingTurnoId = null;
   document.getElementById('turno-notas').value = '';
   document.querySelectorAll('#turno-dias .dia-btn.active').forEach(b => b.classList.remove('active'));
   const extra = document.getElementById('turno-repetir-extra');
   if (extra) extra.style.display = 'none';
+  const rep = document.getElementById('turno-repetir-group'); if (rep) rep.style.display = 'block';
+  const title = document.getElementById('turno-modal-title'); if (title) title.textContent = 'Nuevo turno';
+}
+
+// Abrir el modal de turno precargado para EDITAR uno existente (fecha, hora, servicio,
+// profesional, duración, notas). Sin repetición en varios días (eso es solo para altas).
+function editarTurno(id) {
+  const t = state.turnos.find(x => x.id === id);
+  if (!t) return;
+  closeModal('modal-turno-detalle');
+  openModal('modal-turno');   // popula selects (paciente/prof/servicio/horas) + deja en modo "nuevo"
+  editingTurnoId = id;
+  const set = (idd, v) => { const e = document.getElementById(idd); if (e) e.value = v; };
+  const ensureOpt = (sel, val) => { if (val && ![...sel.options].some(o => o.value === val || o.textContent === val)) sel.insertAdjacentHTML('afterbegin', `<option>${escapeHtml(val)}</option>`); };
+  set('turno-paciente', t.pacienteId || '');
+  set('turno-fecha', t.fecha);
+  const horaSel = document.getElementById('turno-hora');
+  if (t.hora && ![...horaSel.options].some(o => o.value === t.hora)) horaSel.insertAdjacentHTML('beforeend', `<option>${escapeHtml(t.hora)}</option>`);
+  horaSel.value = t.hora || '';
+  set('turno-duracion', String(t.duracion || 45));
+  const servSel = document.getElementById('turno-servicio'); ensureOpt(servSel, t.servicio); servSel.value = t.servicio || '';
+  const profSel = document.getElementById('turno-prof'); ensureOpt(profSel, t.prof); profSel.value = t.prof || '';
+  set('turno-notas', t.notas || '');
+  const rep = document.getElementById('turno-repetir-group'); if (rep) rep.style.display = 'none';
+  const title = document.getElementById('turno-modal-title'); if (title) title.textContent = 'Editar turno';
 }
 
 async function guardarTurno() {
@@ -1578,6 +1607,20 @@ async function guardarTurno() {
   const prof = document.getElementById('turno-prof').value;
   const duracion = parseInt(document.getElementById('turno-duracion').value);
   const notas = document.getElementById('turno-notas').value.trim() || null;
+
+  // EDICIÓN: actualizar el turno existente (sin repetición en varios días ni control de cupo).
+  if (editingTurnoId) {
+    await store.update('turnos', editingTurnoId, {
+      pacienteId: pacObj.id, paciente: pacObj.nombre, fecha: fechaBase, hora, duracion,
+      servicio: serv, servClass: servClassMap[serv] || 'rehab', prof, notas,
+    });
+    editingTurnoId = null;
+    closeModal('modal-turno');
+    resetTurnoForm();
+    if (state.currentPage === 'agenda') renderAgenda();
+    else if (state.currentPage === 'dashboard') renderDashboard();
+    return;
+  }
 
   // Una o varias fechas (repetición semanal en los días marcados).
   const dias = [...document.querySelectorAll('#turno-dias .dia-btn.active')].map(b => parseInt(b.dataset.dia));

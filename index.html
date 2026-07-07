@@ -425,7 +425,7 @@
 <div class="modal-overlay" id="modal-turno">
   <div class="modal">
     <div class="modal-header">
-      <h3>Nuevo turno</h3>
+      <h3 id="turno-modal-title">Nuevo turno</h3>
       <button class="modal-close" onclick="closeModal('modal-turno')">✕</button>
     </div>
     <div class="form-group">
@@ -465,7 +465,7 @@
       <label>Profesional</label>
       <select class="form-control" id="turno-prof"><!-- se completa con los profesionales registrados --></select>
     </div>
-    <div class="form-group">
+    <div class="form-group" id="turno-repetir-group">
       <label>Repetir en estos días <span style="color:var(--text-muted);font-weight:400">(opcional · misma hora)</span></label>
       <div id="turno-dias" style="display:flex;gap:6px;flex-wrap:wrap">
         <button type="button" class="dia-btn" data-dia="1" onclick="toggleDia(this)">Lun</button>
