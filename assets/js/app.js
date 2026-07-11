@@ -1002,6 +1002,19 @@ function enviarRecordatorioWpp(turnoId) {
   window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
+// Manda SOLO la rutina de ejercicios del paciente por WhatsApp.
+function enviarRutinaWpp(id) {
+  const p = store.pacienteById(id) || state.pacientes.find(x => x.id === id);
+  if (!p) return;
+  const rutina = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
+  if (!rutina) { alert('Este paciente no tiene una rutina cargada.\nEditá la ficha y agregala en "Rutina de ejercicios".'); return; }
+  const tel = telWhatsApp(p.tel);
+  if (!tel) { alert('Este paciente no tiene teléfono cargado.\nAgregalo en la ficha para poder enviarle la rutina.'); return; }
+  const nombre = (p.nombre || '').split(' ')[0];
+  const msg = `Hola ${nombre}, te paso tu rutina de ejercicios:\n\n${rutina}\n\nCualquier duda, escribinos. ¡Éxitos! 💪`;
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
 // Manda al paciente, por WhatsApp, TODOS sus turnos agendados a futuro (fecha + hora).
 function enviarTurnosWpp(pacId) {
   const p = store.pacienteById(pacId);
@@ -1748,7 +1761,7 @@ function leerEvalClinica() {
     dolorReposo: n('pac-dolor-reposo'), dolorMovimiento: n('pac-dolor-mov'), dolorDeporte: n('pac-dolor-dep'),
     inflamacion: v('pac-inflamacion'), hematoma: v('pac-hematoma'), inestabilidad: v('pac-inestabilidad'),
     rangoMovilidad: v('pac-rango-movilidad'), mecanismo: v('pac-mecanismo'), antecDeportivos: v('pac-antec-deportivos'),
-    obs, obsTexto: v('pac-ok-obs'),
+    obs, obsTexto: v('pac-ok-obs'), rutina: v('pac-rutina'),
   };
 }
 function fillEvalClinica(e) {
@@ -1760,6 +1773,7 @@ function fillEvalClinica(e) {
   const obs = e.obs || {};
   EVAL_OBS.forEach(([k]) => { const c = document.getElementById('pac-ok-' + k); if (c) c.checked = !!obs[k]; });
   set('pac-ok-obs', e.obsTexto);
+  set('pac-rutina', e.rutina);
 }
 
 function evalTieneDatos(e) {
@@ -2268,6 +2282,16 @@ function verPaciente(id) {
         ${kv('Observaciones', p.observaciones || 'Sin observaciones.')}
       </div>
     </div>
+    ${(() => {
+      const rutina = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
+      return `<div class="detail-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+          <div class="detail-section-title" style="margin:0">Rutina de ejercicios</div>
+          ${rutina ? `<button class="btn btn-sm btn-success" onclick="enviarRutinaWpp('${p.id}')">📲 Enviar por WhatsApp</button>` : ''}
+        </div>
+        <div style="white-space:pre-wrap;font-size:14px;line-height:1.5;${rutina ? '' : 'color:var(--text-muted)'}">${rutina ? escapeHtml(rutina) : 'Sin rutina cargada. Tocá “Editar ficha” para agregarla.'}</div>
+      </div>`;
+    })()}
     ${fichaEvalHtml(p.evalClinica)}
     <div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px">Historial de turnos</div>
     ${turnPac.length === 0 ? '<p style="color:var(--text-muted);font-size:13px">Sin turnos registrados</p>'
