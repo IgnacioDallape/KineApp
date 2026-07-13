@@ -274,6 +274,11 @@ function escapeHtml(value) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+// Logo de WhatsApp (SVG inline). Hereda el color del texto del botón (fill:currentColor).
+function waIcon(size) {
+  size = size || 15;
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" style="vertical-align:-3px;flex-shrink:0" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.359.101 11.892c0 2.096.546 4.142 1.588 5.945L0 24l6.335-1.652a11.882 11.882 0 005.71 1.454h.006c6.585 0 11.946-5.36 11.949-11.945a11.821 11.821 0 00-3.495-8.418"/></svg>`;
+}
 function servicioColor(serv) {
   return ({ 'Rehabilitación': 'blue', 'Readaptación': 'teal', 'Pilates': 'purple', 'Recovery': 'orange', 'Entrenamiento funcional': 'green' })[serv] || 'gray';
 }
@@ -607,7 +612,7 @@ function renderPacientes() {
         : `<span style="font-weight:600">${p.sesiones}</span>`}</td>
       <td><span class="badge ${p.deuda > 0 ? 'badge-red' : 'badge-green'}">${p.deuda > 0 ? 'Debe ' + ars(p.deuda) : 'Al día'}</span></td>
       <td style="display:flex;gap:6px">
-        <button class="btn btn-sm" style="background:var(--green);color:#fff" onclick="enviarTurnosWpp('${p.id}')" title="Enviar turnos agendados por WhatsApp">📲</button>
+        <button class="btn btn-sm" style="background:var(--green);color:#fff;display:inline-flex;align-items:center;justify-content:center" onclick="enviarTurnosWpp('${p.id}')" title="Enviar turnos agendados por WhatsApp">${waIcon()}</button>
         <button class="btn btn-sm btn-secondary" onclick="verPaciente('${p.id}')">Ver ficha</button>
         <button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmarBorrarPaciente('${p.id}')">✕</button>
       </td>
@@ -642,7 +647,7 @@ function renderPacientes() {
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span class="badge ${p.deuda > 0 ? 'badge-red' : 'badge-green'}">${p.deuda > 0 ? 'Debe ' + ars(p.deuda) : 'Al día'}</span>
             <div class="pac-card-actions">
-              <button class="btn btn-sm" style="background:var(--green);color:#fff" onclick="enviarTurnosWpp('${p.id}')">📲 Turnos</button>
+              <button class="btn btn-sm" style="background:var(--green);color:#fff;display:inline-flex;align-items:center;gap:6px" onclick="enviarTurnosWpp('${p.id}')">${waIcon()} Turnos</button>
               <button class="btn btn-sm btn-secondary" onclick="verPaciente('${p.id}')">Ver ficha</button>
               <button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmarBorrarPaciente('${p.id}')">✕ Borrar</button>
             </div>
@@ -1093,7 +1098,7 @@ function renderRecordatorios() {
           <div style="font-size:13px;font-weight:500">${escapeHtml(t.paciente)}</div>
           <div style="font-size:11px;color:var(--text-muted)">Mañana ${t.hora}${tel ? '' : ' · ⚠️ sin teléfono'}</div>
         </div>
-        <button class="btn btn-sm btn-success" ${tel ? '' : 'disabled'} onclick="enviarRecordatorioWpp('${t.id}')">📱 Enviar</button>
+        <button class="btn btn-sm btn-success" style="display:inline-flex;align-items:center;gap:6px" ${tel ? '' : 'disabled'} onclick="enviarRecordatorioWpp('${t.id}')">${waIcon()} Enviar</button>
       </div>`;
       }).join('');
 
@@ -1887,19 +1892,17 @@ function fichaEvalHtml(e) {
   const kv2 = (l, v) => `<div class="detail-item"><div class="detail-item-label">${l}</div><div class="detail-item-value">${escapeHtml(v) || '—'}</div></div>`;
   const obs = e.obs || {};
   const positivos = EVAL_OBS.filter(([k]) => obs[k]).map(([, label]) => label);
+  // Devuelve solo el cuerpo interno; el acordeón de la ficha aporta el título/marco.
   return `
-    <div class="detail-section">
-      <div class="detail-section-title">Evaluación física y kinesiológica</div>
-      <div class="detail-grid">
-        ${dolor('en reposo', e.dolorReposo)}${dolor('en movimiento', e.dolorMovimiento)}${dolor('en actividad', e.dolorDeporte)}
-        ${kv2('¿Inflamación?', e.inflamacion)}${kv2('¿Hematoma?', e.hematoma)}${kv2('¿Inestabilidad?', e.inestabilidad)}
-        ${kv2('Rango de movilidad', e.rangoMovilidad)}${kv2('Mecanismo lesional', e.mecanismo)}${kv2('Antec. deportivos', e.antecDeportivos)}
-      </div>
-      <div style="margin-top:10px">
-        <div class="detail-item-label" style="margin-bottom:6px">Observación kinesiológica</div>
-        ${positivos.length ? positivos.map(l => `<span class="badge badge-orange" style="margin:2px 4px 2px 0">${l}</span>`).join('') : '<span style="font-size:13px;color:var(--text-muted)">Sin hallazgos marcados</span>'}
-        ${e.obsTexto ? `<div style="font-size:13px;margin-top:8px">${escapeHtml(e.obsTexto)}</div>` : ''}
-      </div>
+    <div class="detail-grid">
+      ${dolor('en reposo', e.dolorReposo)}${dolor('en movimiento', e.dolorMovimiento)}${dolor('en actividad', e.dolorDeporte)}
+      ${kv2('¿Inflamación?', e.inflamacion)}${kv2('¿Hematoma?', e.hematoma)}${kv2('¿Inestabilidad?', e.inestabilidad)}
+      ${kv2('Rango de movilidad', e.rangoMovilidad)}${kv2('Mecanismo lesional', e.mecanismo)}${kv2('Antec. deportivos', e.antecDeportivos)}
+    </div>
+    <div style="margin-top:10px">
+      <div class="detail-item-label" style="margin-bottom:6px">Observación kinesiológica</div>
+      ${positivos.length ? positivos.map(l => `<span class="badge badge-orange" style="margin:2px 4px 2px 0">${l}</span>`).join('') : '<span style="font-size:13px;color:var(--text-muted)">Sin hallazgos marcados</span>'}
+      ${e.obsTexto ? `<div style="font-size:13px;margin-top:8px">${escapeHtml(e.obsTexto)}</div>` : ''}
     </div>`;
 }
 
@@ -2265,13 +2268,53 @@ function copiarInformePaciente() {
   document.execCommand('copy'); document.body.removeChild(ta);
   alert('Informe copiado al portapapeles.');
 }
-function compartirInformeWhatsApp(id) {
-  const paciente = obtenerPacienteInforme(id);
-  if (!paciente) return;
-  if (!paciente.tel) { alert('Este paciente no tiene teléfono cargado.'); return; }
-  const telefono = telWhatsApp(paciente.tel);
-  const texto = encodeURIComponent(`Hola, compartimos el informe de plan de rehabilitación y progresión.\n\n${generarInformePacienteTexto(paciente)}`);
-  abrirWhatsAppUrl(`https://wa.me/${telefono}?text=${texto}`);
+// Contexto que necesita el generador de PDF (reutilizado por descargar + compartir).
+function _informeCtx(p) {
+  const turnos = store.turnosDePaciente(p.id).slice()
+    .sort((a, b) => (`${b.fecha} ${b.hora}`).localeCompare(`${a.fecha} ${a.hora}`));
+  const obraSocial = (p.tipoCobertura === 'obra_social' && p.obraSocialId)
+    ? state.obrasSociales.find(x => x.id === p.obraSocialId) : null;
+  const restantes = p.sesionesAuth != null ? Math.max(p.sesionesAuth - p.sesiones, 0) : null;
+  return {
+    etapa: p.etapaActual || deducirEtapaPaciente(p),
+    obraSocial, restantes, ultimoTurno: turnos[0] || null
+  };
+}
+
+async function compartirInformeWhatsApp(id) {
+  const p = obtenerPacienteInforme(id);
+  if (!p) return;
+  const nombre1 = (p.nombre || '').trim().split(/\s+/)[0];
+  const texto = `Hola${nombre1 ? ' ' + nombre1 : ''}, te compartimos tu informe de plan de rehabilitación y progresión (PDF adjunto).`;
+
+  // 1) Preferido: compartir el PDF como ARCHIVO (en el celu aparece WhatsApp en el menú de compartir).
+  if (window.jspdf && window.generarInformePDF && navigator.canShare) {
+    try {
+      const out = window.generarInformePDF(p, Object.assign(_informeCtx(p), { output: 'blob' }));
+      if (out && out.blob) {
+        const file = new File([out.blob], out.filename, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: out.filename, text: texto });
+          return;
+        }
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;   // el usuario cerró el menú de compartir
+      // cualquier otro error -> seguimos al plan B
+    }
+  }
+
+  // 2) Plan B (compu / navegador sin compartir archivos): descargamos el PDF y abrimos WhatsApp con el texto.
+  try {
+    if (window.jspdf && window.generarInformePDF) window.generarInformePDF(p, _informeCtx(p));
+  } catch (e) {}
+  const telefono = telWhatsApp(p.tel);
+  if (!telefono) {
+    alert('Descargamos el PDF del informe. Este paciente no tiene teléfono cargado para abrir WhatsApp.');
+    return;
+  }
+  const msg = encodeURIComponent(`${texto}\n\nAcabamos de descargar el PDF; adjuntalo en el chat.`);
+  abrirWhatsAppUrl(`https://wa.me/${telefono}?text=${msg}`);
 }
 function compartirInformeMail(id) {
   const paciente = obtenerPacienteInforme(id);
@@ -2289,15 +2332,7 @@ function descargarInformePDF() {
     alert('No se pudo cargar el generador de PDF. Revisá tu conexión a internet e intentá de nuevo.');
     return;
   }
-  const turnos = store.turnosDePaciente(p.id).slice()
-    .sort((a, b) => (`${b.fecha} ${b.hora}`).localeCompare(`${a.fecha} ${a.hora}`));
-  const obraSocial = (p.tipoCobertura === 'obra_social' && p.obraSocialId)
-    ? state.obrasSociales.find(x => x.id === p.obraSocialId) : null;
-  const restantes = p.sesionesAuth != null ? Math.max(p.sesionesAuth - p.sesiones, 0) : null;
-  window.generarInformePDF(p, {
-    etapa: p.etapaActual || deducirEtapaPaciente(p),
-    obraSocial, restantes, ultimoTurno: turnos[0] || null
-  });
+  window.generarInformePDF(p, _informeCtx(p));
 }
 
 function verPaciente(id) {
@@ -2310,9 +2345,96 @@ function verPaciente(id) {
     ? state.obrasSociales.find(x => x.id === p.obraSocialId) : null;
 
   const kv = (label, value) => `<div class="detail-item"><div class="detail-item-label">${label}</div><div class="detail-item-value">${escapeHtml(value)}</div></div>`;
+  // Cada sección de la ficha es un menú desplegable (acordeón). La 1ra abierta, el resto colapsadas.
+  const acc = (title, body, open) => `
+    <details class="acc"${open ? ' open' : ''}>
+      <summary class="acc-head"><span>${title}</span><span class="acc-caret">▾</span></summary>
+      <div class="acc-body">${body}</div>
+    </details>`;
+
+  const fichaBody = `<div class="detail-grid">
+      ${kv('DNI', p.dni || '—')}${kv('Teléfono', p.tel || '—')}${kv('Email', p.email || '—')}
+      ${kv('Edad', p.edad || '—')}${kv('Deporte / Actividad', p.deporte || '—')}${kv('Lesión / Diagnóstico', p.lesion || '—')}
+      ${kv('Motivo de consulta', p.motivo || '—')}
+    </div>`;
+
+  const coberturaBody = `<div class="detail-grid">
+      ${kv('Tipo de cobertura', obraSocial ? obraSocial.nombre : 'Paciente particular')}
+      ${kv('Total a pagar', ars(p.totalPagar || 0))}
+      ${kv('Sesiones realizadas', p.sesiones)}
+      ${kv('Sesiones restantes', restantes != null ? `${restantes} de ${p.sesionesAuth}` : 'Sin tope cargado')}
+    </div>
+    ${obraSocial ? (() => {
+      const ses = p.sesionesAuth || 0;
+      const pack = packDeSesiones(ses);
+      const usaPack = pack && precioPack(pack, p.servicio) > 0;
+      const total = usaPack ? coseguroPack(obraSocial, pack, p.servicio) : coseguroPack(obraSocial, 'Por sesión', p.servicio) * (ses || 1);
+      return `<div style="margin-top:12px;padding:12px;border-radius:10px;background:var(--primary-light);border:1px solid var(--primary-soft);font-size:13px"><strong>${escapeHtml(obraSocial.nombre)}</strong> · <span style="color:var(--primary);font-weight:600">Coseguro ${ars(total)}${ses ? ` (${ses} ses.)` : ''}</span></div>`;
+    })() : ''}`;
+
+  const evalPlanBody = `<div class="detail-grid">
+      ${kv('Antecedentes', p.antecedentes || 'Sin antecedentes cargados.')}
+      ${kv('Evaluación inicial', p.evaluacion || 'Sin evaluación cargada.')}
+      ${kv('Objetivo principal', p.objetivo || 'Sin objetivo definido.')}
+      ${kv('Plan de rehabilitación', p.planRehab || 'Sin plan cargado.')}
+      ${kv('Progresión', p.progresion || 'Sin progresión registrada.')}
+      ${kv('Observaciones', p.observaciones || 'Sin observaciones.')}
+    </div>`;
+
+  const pedidoBody = p.fotoMedico ? `<div style="text-align:center">
+      ${p.fotoMedico.src && p.fotoMedico.src.startsWith('data:image')
+        ? `<img src="${p.fotoMedico.src}" style="max-width:100%;max-height:220px;border-radius:6px;cursor:pointer" title="Tocá para ampliar" onclick="window.open(this.src)">
+           <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Tocá la imagen para ampliar</div>`
+        : `<div style="font-size:34px">📄</div>
+           <div style="font-size:13px;color:var(--text-muted);margin:4px 0 10px">${escapeHtml(p.fotoMedico.nombre || 'Pedido médico')}</div>
+           <a class="btn btn-secondary" href="${p.fotoMedico.src}" target="_blank" rel="noopener" download="${escapeHtml(p.fotoMedico.nombre || 'pedido-medico')}">Abrir / descargar</a>`}
+    </div>` : null;
+
+  const rutinaBody = (() => {
+    const plan = p.evalClinica && p.evalClinica.rutinaPlan;
+    const semanas = (plan && Array.isArray(plan.semanas) && plan.semanas.length) ? plan.semanas : null;
+    const rutinaVieja = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
+    if (!semanas && !rutinaVieja) {
+      return `<div style="font-size:14px;color:var(--text-muted)">Sin rutina cargada. Tocá "Editar ficha" para armarla por semanas y días.</div>`;
+    }
+    if (!semanas) { // compat: rutina vieja de texto plano
+      return `<div style="margin-bottom:10px"><button class="btn btn-sm btn-success" style="display:inline-flex;align-items:center;gap:6px" onclick="enviarRutinaWpp('${p.id}')">${waIcon()} Enviar por WhatsApp</button></div>
+        <div style="white-space:pre-wrap;font-size:14px;line-height:1.5">${escapeHtml(rutinaVieja)}</div>`;
+    }
+    return `<div style="margin-bottom:12px"><button class="btn btn-sm btn-success" style="display:inline-flex;align-items:center;gap:6px" onclick="enviarRutinaWpp('${p.id}')">${waIcon()} Enviar todo</button></div>
+      ${semanas.map((dias, wi) => `
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--primary-light);flex-wrap:wrap">
+            <strong style="font-size:13px;color:var(--primary)">Semana ${wi + 1}</strong>
+            <button class="btn btn-sm btn-success" style="padding:4px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px" onclick="enviarRutinaSemana('${p.id}',${wi})">${waIcon(13)} Enviar semana</button>
+          </div>
+          <div style="padding:2px 12px 10px">
+            ${(dias || []).map((ej, di) => `
+              <div style="padding:10px 0;${di ? 'border-top:1px solid var(--border);' : ''}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+                  <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--primary);background:var(--primary-light);padding:2px 9px;border-radius:20px">Día ${di + 1}</span>
+                  <button class="btn btn-sm btn-secondary" style="padding:3px 11px;font-size:11px;display:inline-flex;align-items:center;gap:5px" onclick="enviarRutinaDia('${p.id}',${wi},${di})">${waIcon(12)} Enviar</button>
+                </div>
+                <div style="white-space:pre-wrap;font-size:13.5px;line-height:1.5;color:var(--text)">${escapeHtml((ej || '').trim())}</div>
+              </div>`).join('')}
+          </div>
+        </div>`).join('')}`;
+  })();
+
+  const evalFisicaBody = fichaEvalHtml(p.evalClinica);
+
+  const historialBody = turnPac.length === 0
+    ? '<p style="color:var(--text-muted);font-size:13px">Sin turnos registrados</p>'
+    : turnPac.slice(-5).reverse().map(t => `
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:16px">${servicioEmoji(t.servicio)}</span>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500">${t.fecha} · ${t.hora}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${escapeHtml(t.prof)} · ${t.duracion}min</div></div>
+          ${asistBadge(t.asistencia)}
+        </div>`).join('');
 
   document.getElementById('ficha-content').innerHTML = `
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
       <div style="width:52px;height:52px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${servicioEmoji(p.servicio)}</div>
       <div>
         <div style="font-size:18px;font-weight:600">${escapeHtml(p.nombre)}</div>
@@ -2322,110 +2444,26 @@ function verPaciente(id) {
     <div class="ficha-actions">
       <button class="btn btn-primary" onclick="editarPaciente('${p.id}')">✏️ Editar ficha</button>
       <button class="btn btn-secondary" onclick="abrirInformePaciente('${p.id}')">Ver informe de progreso</button>
-      <button class="btn btn-success" onclick="compartirInformeWhatsApp('${p.id}')">Enviar por WhatsApp</button>
+      <button class="btn btn-success" style="display:inline-flex;align-items:center;gap:6px" onclick="compartirInformeWhatsApp('${p.id}')">${waIcon()} Enviar por WhatsApp</button>
       <button class="btn btn-secondary" onclick="compartirInformeMail('${p.id}')">Enviar por mail</button>
     </div>
-    <div class="detail-section">
-      <div class="detail-section-title">Ficha clínica individual</div>
-      <div class="detail-grid">
-        ${kv('DNI', p.dni || '—')}${kv('Teléfono', p.tel || '—')}${kv('Email', p.email || '—')}
-        ${kv('Edad', p.edad || '—')}${kv('Deporte / Actividad', p.deporte || '—')}${kv('Lesión / Diagnóstico', p.lesion || '—')}
-        ${kv('Motivo de consulta', p.motivo || '—')}
-      </div>
-    </div>
-    <div class="detail-section soft">
-      <div class="detail-section-title">Cobertura y seguimiento</div>
-      <div class="detail-grid">
-        ${kv('Tipo de cobertura', obraSocial ? obraSocial.nombre : 'Paciente particular')}
-        ${kv('Total a pagar', ars(p.totalPagar || 0))}
-        ${kv('Sesiones realizadas', p.sesiones)}
-        ${kv('Sesiones restantes', restantes != null ? `${restantes} de ${p.sesionesAuth}` : 'Sin tope cargado')}
-      </div>
-      ${obraSocial ? (() => {
-        const ses = p.sesionesAuth || 0;
-        const pack = packDeSesiones(ses);
-        const usaPack = pack && precioPack(pack, p.servicio) > 0;
-        const total = usaPack ? coseguroPack(obraSocial, pack, p.servicio) : coseguroPack(obraSocial, 'Por sesión', p.servicio) * (ses || 1);
-        return `<div style="margin-top:12px;padding:12px;border-radius:10px;background:var(--primary-light);border:1px solid var(--primary-soft);font-size:13px"><strong>${escapeHtml(obraSocial.nombre)}</strong> · <span style="color:var(--primary);font-weight:600">Coseguro ${ars(total)}${ses ? ` (${ses} ses.)` : ''}</span></div>`;
-      })() : ''}
-    </div>
-    <div style="display:flex;gap:12px;margin-bottom:20px">
-      <div style="flex:1;text-align:center;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--primary)">${p.sesiones}</div><div style="font-size:12px;color:var(--text-muted)">realizadas</div></div>
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:70px;text-align:center;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--primary)">${p.sesiones}</div><div style="font-size:12px;color:var(--text-muted)">realizadas</div></div>
       ${p.sesionesAuth != null ? (() => {
         const color = restantes === 0 ? 'var(--red)' : restantes === 1 ? 'var(--orange)' : 'var(--teal)';
         const bg = restantes === 0 ? 'var(--red-light)' : restantes === 1 ? 'var(--orange-light)' : 'var(--teal-light)';
-        return `<div style="flex:1;text-align:center;background:${bg};border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:${color}">${restantes}</div><div style="font-size:12px;color:var(--text-muted)">restantes de ${p.sesionesAuth}</div></div>`;
+        return `<div style="flex:1;min-width:70px;text-align:center;background:${bg};border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:${color}">${restantes}</div><div style="font-size:12px;color:var(--text-muted)">restantes de ${p.sesionesAuth}</div></div>`;
       })() : ''}
-      <div style="flex:1;text-align:center;background:var(--green-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--green)">${asistidos}</div><div style="font-size:12px;color:var(--text-muted)">asistencias</div></div>
-      <div style="flex:1;text-align:center;background:${p.deuda > 0 ? 'var(--red-light)' : 'var(--green-light)'};border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:${p.deuda > 0 ? 'var(--red)' : 'var(--green)'}">${ars(p.deuda)}</div><div style="font-size:12px;color:var(--text-muted)">deuda</div></div>
+      <div style="flex:1;min-width:70px;text-align:center;background:var(--green-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--green)">${asistidos}</div><div style="font-size:12px;color:var(--text-muted)">asistencias</div></div>
+      <div style="flex:1;min-width:70px;text-align:center;background:${p.deuda > 0 ? 'var(--red-light)' : 'var(--green-light)'};border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:${p.deuda > 0 ? 'var(--red)' : 'var(--green)'}">${ars(p.deuda)}</div><div style="font-size:12px;color:var(--text-muted)">deuda</div></div>
     </div>
-    ${p.fotoMedico ? `<div style="margin-bottom:16px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px">Pedido médico</div>
-      <div style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg);padding:12px;text-align:center">
-        ${p.fotoMedico.src && p.fotoMedico.src.startsWith('data:image')
-          ? `<img src="${p.fotoMedico.src}" style="max-width:100%;max-height:220px;border-radius:6px;cursor:pointer" title="Tocá para ampliar" onclick="window.open(this.src)">
-             <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Tocá la imagen para ampliar</div>`
-          : `<div style="font-size:34px">📄</div>
-             <div style="font-size:13px;color:var(--text-muted);margin:4px 0 10px">${escapeHtml(p.fotoMedico.nombre || 'Pedido médico')}</div>
-             <a class="btn btn-secondary" href="${p.fotoMedico.src}" target="_blank" rel="noopener" download="${escapeHtml(p.fotoMedico.nombre || 'pedido-medico')}">Abrir / descargar</a>`}
-      </div></div>` : ''}
-    <div class="detail-section">
-      <div class="detail-section-title">Evaluación y planificación</div>
-      <div class="detail-grid">
-        ${kv('Antecedentes', p.antecedentes || 'Sin antecedentes cargados.')}
-        ${kv('Evaluación inicial', p.evaluacion || 'Sin evaluación cargada.')}
-        ${kv('Objetivo principal', p.objetivo || 'Sin objetivo definido.')}
-        ${kv('Plan de rehabilitación', p.planRehab || 'Sin plan cargado.')}
-        ${kv('Progresión', p.progresion || 'Sin progresión registrada.')}
-        ${kv('Observaciones', p.observaciones || 'Sin observaciones.')}
-      </div>
-    </div>
-    ${(() => {
-      const plan = p.evalClinica && p.evalClinica.rutinaPlan;
-      const semanas = (plan && Array.isArray(plan.semanas) && plan.semanas.length) ? plan.semanas : null;
-      const rutinaVieja = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
-      const titulo = '<div class="detail-section-title" style="margin:0">Rutina de ejercicios</div>';
-      if (!semanas && !rutinaVieja) {
-        return `<div class="detail-section">${titulo}<div style="font-size:14px;color:var(--text-muted);margin-top:6px">Sin rutina cargada. Tocá "Editar ficha" para armarla por semanas y días.</div></div>`;
-      }
-      if (!semanas) { // compat: rutina vieja de texto plano
-        return `<div class="detail-section">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap">${titulo}
-            <button class="btn btn-sm btn-success" onclick="enviarRutinaWpp('${p.id}')">📲 Enviar por WhatsApp</button></div>
-          <div style="white-space:pre-wrap;font-size:14px;line-height:1.5">${escapeHtml(rutinaVieja)}</div></div>`;
-      }
-      return `<div class="detail-section">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">${titulo}
-          <button class="btn btn-sm btn-success" onclick="enviarRutinaWpp('${p.id}')">📲 Enviar todo</button></div>
-        ${semanas.map((dias, wi) => `
-          <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--primary-light);flex-wrap:wrap">
-              <strong style="font-size:13px;color:var(--primary)">Semana ${wi + 1}</strong>
-              <button class="btn btn-sm btn-success" style="padding:4px 12px;font-size:12px" onclick="enviarRutinaSemana('${p.id}',${wi})">📲 Enviar semana</button>
-            </div>
-            <div style="padding:2px 12px 10px">
-              ${(dias || []).map((ej, di) => `
-                <div style="padding:10px 0;${di ? 'border-top:1px solid var(--border);' : ''}">
-                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
-                    <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--primary);background:var(--primary-light);padding:2px 9px;border-radius:20px">Día ${di + 1}</span>
-                    <button class="btn btn-sm btn-secondary" style="padding:3px 11px;font-size:11px" onclick="enviarRutinaDia('${p.id}',${wi},${di})">📲 Enviar</button>
-                  </div>
-                  <div style="white-space:pre-wrap;font-size:13.5px;line-height:1.5;color:var(--text)">${escapeHtml((ej || '').trim())}</div>
-                </div>`).join('')}
-            </div>
-          </div>`).join('')}
-      </div>`;
-    })()}
-    ${fichaEvalHtml(p.evalClinica)}
-    <div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px">Historial de turnos</div>
-    ${turnPac.length === 0 ? '<p style="color:var(--text-muted);font-size:13px">Sin turnos registrados</p>'
-      : turnPac.slice(-5).reverse().map(t => `
-        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
-          <span style="font-size:16px">${servicioEmoji(t.servicio)}</span>
-          <div style="flex:1"><div style="font-size:13px;font-weight:500">${t.fecha} · ${t.hora}</div>
-            <div style="font-size:12px;color:var(--text-muted)">${escapeHtml(t.prof)} · ${t.duracion}min</div></div>
-          ${asistBadge(t.asistencia)}
-        </div>`).join('')}`;
+    ${acc('Ficha clínica individual', fichaBody, true)}
+    ${acc('Cobertura y seguimiento', coberturaBody, false)}
+    ${pedidoBody ? acc('Pedido médico', pedidoBody, false) : ''}
+    ${acc('Evaluación y planificación', evalPlanBody, false)}
+    ${acc('Rutina de ejercicios', rutinaBody, false)}
+    ${evalFisicaBody ? acc('Evaluación física y kinesiológica', evalFisicaBody, false) : ''}
+    ${acc('Historial de turnos', historialBody, false)}`;
   openModal('modal-ficha');
 }
 

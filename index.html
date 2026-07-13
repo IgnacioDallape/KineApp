@@ -133,17 +133,19 @@
       <button class="btn btn-primary" onclick="nuevoPaciente()">+ Nuevo paciente</button>
     </div>
     <div class="card" style="margin-bottom:16px">
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <div class="search-wrap" style="flex:1;min-width:200px">
+      <div class="filters-bar">
+        <div class="search-wrap">
           <span class="search-icon">&#128269;</span>
-          <input class="form-control" placeholder="Buscar" oninput="filtrarPacientes(this.value)">
+          <input class="form-control" placeholder="Buscar paciente…" oninput="filtrarPacientes(this.value)">
         </div>
-        <select class="form-control" id="pac-filtro-prof" style="width:170px" onchange="filtrarPorProf(this.value)">
-          <option value="">Todos los profesionales</option>
-        </select>
-        <select class="form-control" id="pac-filtro-serv" style="width:160px" onchange="filtrarPorServicio(this.value)">
-          <option value="">Todos los servicios</option>
-        </select>
+        <div class="filters-selects">
+          <select class="select-pretty" id="pac-filtro-prof" onchange="filtrarPorProf(this.value)">
+            <option value="">Todos los profesionales</option>
+          </select>
+          <select class="select-pretty" id="pac-filtro-serv" onchange="filtrarPorServicio(this.value)">
+            <option value="">Todos los servicios</option>
+          </select>
+        </div>
       </div>
     </div>
     <div class="card" id="pacientes-tabla-wrap" style="padding:0;overflow:hidden">

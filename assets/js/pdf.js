@@ -161,7 +161,10 @@
     }
 
     const safe = (p.nombre || 'paciente').replace(/[^\wáéíóúñ ]/gi, '').trim();
-    doc.save(`Informe - ${safe}.pdf`);
+    const filename = `Informe - ${safe}.pdf`;
+    // ctx.output === 'blob' -> devolvemos el PDF como Blob (para compartirlo como archivo por WhatsApp/etc.)
+    if (ctx.output === 'blob') return { blob: doc.output('blob'), filename };
+    doc.save(filename);
   }
 
   window.generarInformePDF = generarInformePDF;
