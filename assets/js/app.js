@@ -1002,17 +1002,44 @@ function enviarRecordatorioWpp(turnoId) {
   window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-// Manda SOLO la rutina de ejercicios del paciente por WhatsApp.
-function enviarRutinaWpp(id) {
-  const p = store.pacienteById(id) || state.pacientes.find(x => x.id === id);
-  if (!p) return;
-  const rutina = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
-  if (!rutina) { alert('Este paciente no tiene una rutina cargada.\nEditá la ficha y agregala en "Rutina de ejercicios".'); return; }
+// ===== ENVIAR RUTINA POR WHATSAPP (todo / una semana / un día) =====
+function _pacById(id) { return store.pacienteById(id) || state.pacientes.find(x => x.id === id); }
+function _pacRutinaSemanas(p) {
+  const plan = p && p.evalClinica && p.evalClinica.rutinaPlan;
+  return (plan && Array.isArray(plan.semanas)) ? plan.semanas : null;
+}
+function _rutinaWppAbrir(p, cuerpo) {
   const tel = telWhatsApp(p.tel);
   if (!tel) { alert('Este paciente no tiene teléfono cargado.\nAgregalo en la ficha para poder enviarle la rutina.'); return; }
   const nombre = (p.nombre || '').split(' ')[0];
-  const msg = `Hola ${nombre}, te paso tu rutina de ejercicios:\n\n${rutina}\n\nCualquier duda, escribinos. ¡Éxitos! 💪`;
+  const msg = `Hola ${nombre}, te paso tu rutina de ejercicios:\n\n${cuerpo}\n\nCualquier duda, escribinos. ¡Éxitos! 💪`;
   window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+function enviarRutinaDia(id, wi, di) {
+  const p = _pacById(id); if (!p) return;
+  const semanas = _pacRutinaSemanas(p);
+  const ej = semanas && semanas[wi] && (semanas[wi][di] || '').trim();
+  if (!ej) { alert('Ese día no tiene ejercicios cargados.'); return; }
+  _rutinaWppAbrir(p, `Semana ${wi + 1} · Día ${di + 1}\n${ej}`);
+}
+function enviarRutinaSemana(id, wi) {
+  const p = _pacById(id); if (!p) return;
+  const semanas = _pacRutinaSemanas(p);
+  const dias = semanas && semanas[wi];
+  if (!dias || !dias.length) { alert('Esa semana no tiene días cargados.'); return; }
+  const cuerpo = `Semana ${wi + 1}\n\n` + dias.map((ej, di) => `Día ${di + 1}\n${(ej || '').trim()}`).filter(Boolean).join('\n\n');
+  _rutinaWppAbrir(p, cuerpo);
+}
+function enviarRutinaWpp(id) {   // enviar TODA la rutina
+  const p = _pacById(id); if (!p) return;
+  const semanas = _pacRutinaSemanas(p);
+  if (semanas && semanas.length) {
+    const cuerpo = semanas.map((dias, wi) => `SEMANA ${wi + 1}\n\n` + (dias || []).map((ej, di) => `Día ${di + 1}\n${(ej || '').trim()}`).join('\n\n')).join('\n\n———\n\n');
+    _rutinaWppAbrir(p, cuerpo); return;
+  }
+  const rutinaVieja = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
+  if (!rutinaVieja) { alert('Este paciente no tiene una rutina cargada.\nEditá la ficha y agregala en "Rutina de ejercicios".'); return; }
+  _rutinaWppAbrir(p, rutinaVieja);
 }
 
 // Manda al paciente, por WhatsApp, TODOS sus turnos agendados a futuro (fecha + hora).
@@ -1761,7 +1788,7 @@ function leerEvalClinica() {
     dolorReposo: n('pac-dolor-reposo'), dolorMovimiento: n('pac-dolor-mov'), dolorDeporte: n('pac-dolor-dep'),
     inflamacion: v('pac-inflamacion'), hematoma: v('pac-hematoma'), inestabilidad: v('pac-inestabilidad'),
     rangoMovilidad: v('pac-rango-movilidad'), mecanismo: v('pac-mecanismo'), antecDeportivos: v('pac-antec-deportivos'),
-    obs, obsTexto: v('pac-ok-obs'), rutina: v('pac-rutina'),
+    obs, obsTexto: v('pac-ok-obs'), rutinaPlan: leerRutinaPlan(),
   };
 }
 function fillEvalClinica(e) {
@@ -1773,7 +1800,64 @@ function fillEvalClinica(e) {
   const obs = e.obs || {};
   EVAL_OBS.forEach(([k]) => { const c = document.getElementById('pac-ok-' + k); if (c) c.checked = !!obs[k]; });
   set('pac-ok-obs', e.obsTexto);
-  set('pac-rutina', e.rutina);
+  cargarRutinaPlan(e.rutinaPlan, e.rutina);
+}
+
+// ===== ARMADOR DE RUTINA (semanas -> días) =====
+// rutinaDraft: array de semanas; cada semana es un array de strings (los días).
+let rutinaDraft = [];
+function renderRutinaBuilder() {
+  const cont = document.getElementById('pac-rutina-builder');
+  if (!cont) return;
+  if (!rutinaDraft.length) {
+    cont.innerHTML = '<p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">Sin rutina todavía. Agregá una semana para empezar.</p>';
+    return;
+  }
+  cont.innerHTML = rutinaDraft.map((dias, wi) => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--bg)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <strong style="font-size:13px;color:var(--primary)">Semana ${wi + 1}</strong>
+        <button type="button" onclick="eliminarSemanaRutina(${wi})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">✕ Semana</button>
+      </div>
+      ${(dias || []).map((ej, di) => `
+        <div style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+            <span style="font-size:12px;font-weight:600;color:var(--text-muted)">Día ${di + 1}</span>
+            <button type="button" onclick="eliminarDiaRutina(${wi},${di})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px">✕ Día</button>
+          </div>
+          <textarea class="form-control" id="rut-${wi}-${di}" rows="3" placeholder="Ejercicios del día (uno por línea)...">${escapeHtml(ej || '')}</textarea>
+        </div>`).join('')}
+      <button type="button" class="btn btn-sm btn-secondary" onclick="agregarDiaRutina(${wi})">+ Día</button>
+    </div>`).join('');
+}
+function syncRutinaFromDOM() {
+  rutinaDraft = rutinaDraft.map((dias, wi) => (dias || []).map((_, di) => {
+    const t = document.getElementById(`rut-${wi}-${di}`);
+    return t ? t.value : '';
+  }));
+}
+function agregarSemanaRutina() { syncRutinaFromDOM(); rutinaDraft.push(['']); renderRutinaBuilder(); }
+function eliminarSemanaRutina(wi) { syncRutinaFromDOM(); rutinaDraft.splice(wi, 1); renderRutinaBuilder(); }
+function agregarDiaRutina(wi) { syncRutinaFromDOM(); if (!rutinaDraft[wi]) rutinaDraft[wi] = []; rutinaDraft[wi].push(''); renderRutinaBuilder(); }
+function eliminarDiaRutina(wi, di) { syncRutinaFromDOM(); rutinaDraft[wi].splice(di, 1); if (!rutinaDraft[wi].length) rutinaDraft.splice(wi, 1); renderRutinaBuilder(); }
+// Devuelve el plan para guardar (limpia días y semanas vacías) o null si no hay nada.
+function leerRutinaPlan() {
+  syncRutinaFromDOM();
+  const semanas = rutinaDraft
+    .map(dias => (dias || []).map(d => (d || '').trim()).filter(Boolean))
+    .filter(dias => dias.length);
+  return semanas.length ? { semanas } : null;
+}
+// Carga el armador desde el plan guardado (o migra la rutina vieja de texto plano).
+function cargarRutinaPlan(plan, rutinaVieja) {
+  if (plan && Array.isArray(plan.semanas) && plan.semanas.length) {
+    rutinaDraft = plan.semanas.map(dias => Array.isArray(dias) ? dias.slice() : []);
+  } else if (rutinaVieja && rutinaVieja.trim()) {
+    rutinaDraft = [[rutinaVieja.trim()]];   // rutina vieja (texto) -> Semana 1 / Día 1
+  } else {
+    rutinaDraft = [];
+  }
+  renderRutinaBuilder();
 }
 
 function evalTieneDatos(e) {
@@ -2283,13 +2367,37 @@ function verPaciente(id) {
       </div>
     </div>
     ${(() => {
-      const rutina = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
-      return `<div class="detail-section">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap">
-          <div class="detail-section-title" style="margin:0">Rutina de ejercicios</div>
-          ${rutina ? `<button class="btn btn-sm btn-success" onclick="enviarRutinaWpp('${p.id}')">📲 Enviar por WhatsApp</button>` : ''}
-        </div>
-        <div style="white-space:pre-wrap;font-size:14px;line-height:1.5;${rutina ? '' : 'color:var(--text-muted)'}">${rutina ? escapeHtml(rutina) : 'Sin rutina cargada. Tocá “Editar ficha” para agregarla.'}</div>
+      const plan = p.evalClinica && p.evalClinica.rutinaPlan;
+      const semanas = (plan && Array.isArray(plan.semanas) && plan.semanas.length) ? plan.semanas : null;
+      const rutinaVieja = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
+      const titulo = '<div class=”detail-section-title” style=”margin:0”>Rutina de ejercicios</div>';
+      if (!semanas && !rutinaVieja) {
+        return `<div class=”detail-section”>${titulo}<div style=”font-size:14px;color:var(--text-muted);margin-top:6px”>Sin rutina cargada. Tocá “Editar ficha” para armarla por semanas y días.</div></div>`;
+      }
+      if (!semanas) { // compat: rutina vieja de texto plano
+        return `<div class=”detail-section”>
+          <div style=”display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap”>${titulo}
+            <button class=”btn btn-sm btn-success” onclick=”enviarRutinaWpp('${p.id}')”>📲 Enviar por WhatsApp</button></div>
+          <div style=”white-space:pre-wrap;font-size:14px;line-height:1.5”>${escapeHtml(rutinaVieja)}</div></div>`;
+      }
+      return `<div class=”detail-section”>
+        <div style=”display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap”>${titulo}
+          <button class=”btn btn-sm btn-success” onclick=”enviarRutinaWpp('${p.id}')”>📲 Enviar todo</button></div>
+        ${semanas.map((dias, wi) => `
+          <div style=”border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px”>
+            <div style=”display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap”>
+              <strong style=”font-size:13px;color:var(--primary)”>Semana ${wi + 1}</strong>
+              <button class=”btn btn-sm btn-success” style=”padding:4px 10px;font-size:12px” onclick=”enviarRutinaSemana('${p.id}',${wi})”>📲 Enviar semana</button>
+            </div>
+            ${(dias || []).map((ej, di) => `
+              <div style=”padding:7px 0;border-top:1px solid var(--border)”>
+                <div style=”display:flex;align-items:center;justify-content:space-between;gap:8px”>
+                  <span style=”font-size:12px;font-weight:600;color:var(--text-muted)”>Día ${di + 1}</span>
+                  <button class=”btn btn-sm btn-secondary” style=”padding:3px 9px;font-size:11px” onclick=”enviarRutinaDia('${p.id}',${wi},${di})”>📲 Día</button>
+                </div>
+                <div style=”white-space:pre-wrap;font-size:13px;line-height:1.45;margin-top:3px”>${escapeHtml((ej || '').trim())}</div>
+              </div>`).join('')}
+          </div>`).join('')}
       </div>`;
     })()}
     ${fichaEvalHtml(p.evalClinica)}
