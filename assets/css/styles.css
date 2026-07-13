@@ -153,6 +153,8 @@
   /* FORM */
   .form-group { margin-bottom: 16px; }
   .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  /* En estas grillas, las etiquetas de 1 o 2 líneas ocupan lo mismo -> los campos quedan alineados. */
+  .grid-eval > .form-group > label { min-height: 34px; }
   .form-control {
     width: 100%; padding: 9px 12px; border: 1px solid var(--border);
     border-radius: var(--radius-sm); font-size: 14px; font-family: inherit;
@@ -486,28 +488,31 @@
 
   /* ===== FICHA IMPRIMIBLE ===== */
   #ficha-print { display: none; }
-  .fp-wrap { font-family: 'DM Sans', system-ui, sans-serif; color: #111; padding: 24px 30px; max-width: 760px; margin: 0 auto; }
-  .fp-head { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 16px; }
+  .fp-wrap { font-family: 'DM Sans', system-ui, sans-serif; color: #111; padding: 0; max-width: 760px; margin: 0 auto; }
+  .fp-head { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 3px solid #2563eb; padding-bottom: 8px; margin-bottom: 10px; }
   .fp-logo { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
   .fp-logo .b { color: #2563eb; }
   .fp-logo small { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #777; margin-top: 4px; }
   .fp-title { font-size: 12px; color: #555; text-align: right; }
-  .fp-name { font-size: 20px; font-weight: 700; margin: 6px 0 2px; }
-  .fp-h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #2563eb; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin: 18px 0 10px; }
+  .fp-name { font-size: 18px; font-weight: 700; margin: 4px 0 2px; }
+  .fp-h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #2563eb; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin: 11px 0 5px; }
   .fp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
-  .fp-row { padding: 4px 0; border-bottom: 1px solid #eee; }
+  .fp-row { padding: 2px 0; border-bottom: 1px solid #eee; }
   .fp-row .l { color: #666; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
   .fp-row .v { font-size: 13px; }
-  .fp-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 28px; font-size: 13px; }
-  .fp-checks .ck { padding: 2px 0; }
-  .fp-firmas { display: flex; gap: 50px; margin-top: 56px; }
+  .fp-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 28px; font-size: 13px; page-break-inside: avoid; }
+  .fp-checks .ck { padding: 1px 0; }
+  .fp-firmas { display: flex; gap: 50px; margin-top: 24px; page-break-inside: avoid; }
   .fp-firma { flex: 1; text-align: center; }
   .fp-firma .line { border-top: 1px solid #333; margin-bottom: 6px; }
   .fp-firma .cap { font-size: 12px; color: #555; }
-  .fp-fecha { margin-top: 26px; font-size: 13px; }
+  .fp-fecha { margin-top: 12px; font-size: 13px; page-break-inside: avoid; }
 
   @media print {
     body > *:not(#ficha-print) { display: none !important; }
     #ficha-print { display: block !important; position: static; width: 100%; }
-    @page { margin: 14mm; }
+    @page { margin: 10mm; }
+    /* que las secciones no se corten a la mitad entre hojas */
+    .fp-h2 { page-break-after: avoid; }
+    .fp-grid, .fp-row { page-break-inside: avoid; }
   }
