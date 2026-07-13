@@ -999,10 +999,24 @@ function enviarRecordatorioWpp(turnoId) {
     .replace(/{fecha}/g, formatFechaLarga(t.fecha))
     .replace(/{hora}/g, t.hora)
     .replace(/{profesional}/g, t.prof || '');
-  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
 }
 
 // ===== ENVIAR RUTINA POR WHATSAPP (todo / una semana / un día) =====
+// Abre WhatsApp de forma confiable. En iPhone/PWA, window.open('_blank') a veces se
+// bloquea en silencio (sobre todo con mensajes largos como "enviar todo"): usamos un
+// enlace real con click, que iOS respeta como gesto del usuario.
+function abrirWhatsAppUrl(url) {
+  try {
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { try { a.remove(); } catch (_) {} }, 400);
+  } catch (_) {
+    window.location.href = url;
+  }
+}
 function _pacById(id) { return store.pacienteById(id) || state.pacientes.find(x => x.id === id); }
 function _pacRutinaSemanas(p) {
   const plan = p && p.evalClinica && p.evalClinica.rutinaPlan;
@@ -1013,7 +1027,7 @@ function _rutinaWppAbrir(p, cuerpo) {
   if (!tel) { alert('Este paciente no tiene teléfono cargado.\nAgregalo en la ficha para poder enviarle la rutina.'); return; }
   const nombre = (p.nombre || '').split(' ')[0];
   const msg = `Hola ${nombre}, te paso tu rutina de ejercicios:\n\n${cuerpo}\n\nCualquier duda, escribinos. ¡Éxitos! 💪`;
-  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
 }
 function enviarRutinaDia(id, wi, di) {
   const p = _pacById(id); if (!p) return;
@@ -1034,7 +1048,7 @@ function enviarRutinaWpp(id) {   // enviar TODA la rutina
   const p = _pacById(id); if (!p) return;
   const semanas = _pacRutinaSemanas(p);
   if (semanas && semanas.length) {
-    const cuerpo = semanas.map((dias, wi) => `SEMANA ${wi + 1}\n\n` + (dias || []).map((ej, di) => `Día ${di + 1}\n${(ej || '').trim()}`).join('\n\n')).join('\n\n———\n\n');
+    const cuerpo = semanas.map((dias, wi) => `SEMANA ${wi + 1}\n\n` + (dias || []).map((ej, di) => `Día ${di + 1}\n${(ej || '').trim()}`).join('\n\n')).join('\n\n\n');
     _rutinaWppAbrir(p, cuerpo); return;
   }
   const rutinaVieja = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
@@ -1056,7 +1070,7 @@ function enviarTurnosWpp(pacId) {
   const lista = turnos.map(t => `• ${formatFechaLarga(t.fecha)} a las ${t.hora} hs`).join('\n');
   const nombre = (p.nombre || '').split(' ')[0];
   const msg = `Hola ${nombre}, te paso tus turnos agendados:\n\n${lista}\n\n¡Te esperamos!`;
-  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
 }
 
 function renderRecordatorios() {
@@ -2257,7 +2271,7 @@ function compartirInformeWhatsApp(id) {
   if (!paciente.tel) { alert('Este paciente no tiene teléfono cargado.'); return; }
   const telefono = telWhatsApp(paciente.tel);
   const texto = encodeURIComponent(`Hola, compartimos el informe de plan de rehabilitación y progresión.\n\n${generarInformePacienteTexto(paciente)}`);
-  window.open(`https://wa.me/${telefono}?text=${texto}`, '_blank');
+  abrirWhatsAppUrl(`https://wa.me/${telefono}?text=${texto}`);
 }
 function compartirInformeMail(id) {
   const paciente = obtenerPacienteInforme(id);
