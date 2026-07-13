@@ -2316,13 +2316,53 @@ async function compartirInformeWhatsApp(id) {
   const msg = encodeURIComponent(`${texto}\n\nAcabamos de descargar el PDF; adjuntalo en el chat.`);
   abrirWhatsAppUrl(`https://wa.me/${telefono}?text=${msg}`);
 }
-function compartirInformeMail(id) {
-  const paciente = obtenerPacienteInforme(id);
-  if (!paciente) return;
-  if (!paciente.email) { alert('Este paciente no tiene email cargado.'); return; }
-  const asunto = encodeURIComponent(`Informe de plan de rehabilitación y progresión - ${paciente.nombre}`);
-  const cuerpo = encodeURIComponent(`Hola,\n\nCompartimos el informe actualizado del paciente.\n\n${generarInformePacienteTexto(paciente)}`);
-  window.location.href = `mailto:${encodeURIComponent(paciente.email)}?subject=${asunto}&body=${cuerpo}`;
+// Texto de presentación que va en el cuerpo del mail (antes del PDF adjunto).
+function _informePresentacionMail(p) {
+  const n1 = (p.nombre || '').trim().split(/\s+/)[0];
+  return [
+    `Hola${n1 ? ' ' + n1 : ''},`,
+    ``,
+    `Te compartimos tu informe de plan de rehabilitación y progresión, elaborado por el equipo de kinesico SPORT.`,
+    ``,
+    `En el PDF adjunto vas a encontrar el detalle de la evaluación clínica, el plan de rehabilitación y la progresión de tus sesiones.`,
+    ``,
+    `Ante cualquier duda quedamos a disposición.`,
+    ``,
+    `Saludos,`,
+    `Equipo de kinesico SPORT`
+  ].join('\n');
+}
+
+async function compartirInformeMail(id) {
+  const p = obtenerPacienteInforme(id);
+  if (!p) return;
+  const asunto = `Informe de plan de rehabilitación y progresión - ${p.nombre || 'Paciente'}`;
+  const cuerpo = _informePresentacionMail(p);
+
+  // 1) Preferido: compartir el PDF como ARCHIVO. En el celu podés elegir Mail y el PDF va adjunto con esta presentación en el cuerpo.
+  if (window.jspdf && window.generarInformePDF && navigator.canShare) {
+    try {
+      const out = window.generarInformePDF(p, Object.assign(_informeCtx(p), { output: 'blob' }));
+      if (out && out.blob) {
+        const file = new File([out.blob], out.filename, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: asunto, text: cuerpo });
+          return;
+        }
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;   // el usuario cerró el menú de compartir
+      // cualquier otro error -> seguimos al plan B
+    }
+  }
+
+  // 2) Plan B (compu / correo sin adjuntar por share): descargamos el PDF y abrimos el mail con la presentación.
+  try {
+    if (window.jspdf && window.generarInformePDF) window.generarInformePDF(p, _informeCtx(p));
+  } catch (e) {}
+  const cuerpoB = `${cuerpo}\n\n(Adjuntamos el informe en PDF: si tu correo no lo agregó solo, sumá el archivo que acabamos de descargar.)`;
+  const to = p.email ? encodeURIComponent(p.email) : '';
+  window.location.href = `mailto:${to}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpoB)}`;
 }
 
 function descargarInformePDF() {
