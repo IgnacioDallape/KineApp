@@ -34,23 +34,29 @@
     // ---- cabecera con logo ----
     function header(first) {
       const hh = first ? 112 : 58;
-      doc.setFillColor(...C.accent); doc.rect(0, 0, W, hh, 'F');
+      doc.setFillColor(11, 11, 13); doc.rect(0, 0, W, hh, 'F');   // fondo oscuro (#0b0b0d, igual que el ícono del PWA)
       const cy = first ? 48 : 30;
-      // badge: círculo blanco con cruz médica azul
-      doc.setFillColor(...C.white); doc.circle(M + 16, cy, 16, 'F');
-      doc.setFillColor(...C.accent);
-      doc.rect(M + 13, cy - 9, 6, 18, 'F');
-      doc.rect(M + 7, cy - 3, 18, 6, 'F');
+      // logo del PWA: cuadrado redondeado oscuro con "kS" (k blanca, S azul)
+      const bs = first ? 34 : 26;
+      const bx = M, by = cy - bs / 2;
+      doc.setFillColor(24, 24, 28); doc.roundedRect(bx, by, bs, bs, 7, 7, 'F');
+      doc.setDrawColor(55, 60, 72); doc.setLineWidth(0.8); doc.roundedRect(bx, by, bs, bs, 7, 7, 'S');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(first ? 18 : 14);
+      const kW2 = doc.getTextWidth('k'), sW2 = doc.getTextWidth('S');
+      const startX = bx + bs / 2 - (kW2 + sW2) / 2;
+      const kSy = cy + (first ? 6 : 4.5);
+      doc.setTextColor(255, 255, 255); doc.text('k', startX, kSy);
+      doc.setTextColor(59, 130, 246); doc.text('S', startX + kW2, kSy);
       // wordmark "kinesico SPORT"
       doc.setFont('helvetica', 'bold'); doc.setFontSize(first ? 22 : 16);
-      const lx = M + 42, ly = cy + (first ? 2 : 1);
-      doc.setTextColor(...C.white); doc.text('kinesico', lx, ly);
+      const lx = bx + bs + 12, ly = cy + (first ? 2 : 1);
+      doc.setTextColor(255, 255, 255); doc.text('kinesico', lx, ly);
       const kw = doc.getTextWidth('kinesico');
-      doc.setTextColor(147, 197, 253); doc.text('SPORT', lx + kw + 4, ly);
+      doc.setTextColor(59, 130, 246); doc.text('SPORT', lx + kw + 4, ly);
       if (first) {
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-        doc.setTextColor(219, 234, 254);
-        doc.text('CENTRO KINESIOLÓGICO', M + 43, cy + 18);
+        doc.setTextColor(148, 158, 175);
+        doc.text('CENTRO KINESIOLÓGICO', lx + 1, cy + 18);
       }
       y = first ? 140 : 84;
     }

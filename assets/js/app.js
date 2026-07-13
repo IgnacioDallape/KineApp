@@ -1098,7 +1098,7 @@ function renderRecordatorios() {
       }).join('');
 
   document.getElementById('hist-rec').innerHTML =
-    '<p style="color:var(--text-muted);font-size:13px">Los recordatorios que envíes por WhatsApp van a quedar registrados acá. (El envío hoy es manual desde el botón “Enviar”.)</p>';
+    '<p style="color:var(--text-muted);font-size:13px">Los recordatorios que envíes por WhatsApp van a quedar registrados acá. (El envío hoy es manual desde el botón "Enviar".)</p>';
 }
 function guardarRecConfig() {
   const cfg = {
@@ -2384,33 +2384,35 @@ function verPaciente(id) {
       const plan = p.evalClinica && p.evalClinica.rutinaPlan;
       const semanas = (plan && Array.isArray(plan.semanas) && plan.semanas.length) ? plan.semanas : null;
       const rutinaVieja = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
-      const titulo = '<div class=”detail-section-title” style=”margin:0”>Rutina de ejercicios</div>';
+      const titulo = '<div class="detail-section-title" style="margin:0">Rutina de ejercicios</div>';
       if (!semanas && !rutinaVieja) {
-        return `<div class=”detail-section”>${titulo}<div style=”font-size:14px;color:var(--text-muted);margin-top:6px”>Sin rutina cargada. Tocá “Editar ficha” para armarla por semanas y días.</div></div>`;
+        return `<div class="detail-section">${titulo}<div style="font-size:14px;color:var(--text-muted);margin-top:6px">Sin rutina cargada. Tocá "Editar ficha" para armarla por semanas y días.</div></div>`;
       }
       if (!semanas) { // compat: rutina vieja de texto plano
-        return `<div class=”detail-section”>
-          <div style=”display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap”>${titulo}
-            <button class=”btn btn-sm btn-success” onclick=”enviarRutinaWpp('${p.id}')”>📲 Enviar por WhatsApp</button></div>
-          <div style=”white-space:pre-wrap;font-size:14px;line-height:1.5”>${escapeHtml(rutinaVieja)}</div></div>`;
+        return `<div class="detail-section">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap">${titulo}
+            <button class="btn btn-sm btn-success" onclick="enviarRutinaWpp('${p.id}')">📲 Enviar por WhatsApp</button></div>
+          <div style="white-space:pre-wrap;font-size:14px;line-height:1.5">${escapeHtml(rutinaVieja)}</div></div>`;
       }
-      return `<div class=”detail-section”>
-        <div style=”display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap”>${titulo}
-          <button class=”btn btn-sm btn-success” onclick=”enviarRutinaWpp('${p.id}')”>📲 Enviar todo</button></div>
+      return `<div class="detail-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">${titulo}
+          <button class="btn btn-sm btn-success" onclick="enviarRutinaWpp('${p.id}')">📲 Enviar todo</button></div>
         ${semanas.map((dias, wi) => `
-          <div style=”border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px”>
-            <div style=”display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap”>
-              <strong style=”font-size:13px;color:var(--primary)”>Semana ${wi + 1}</strong>
-              <button class=”btn btn-sm btn-success” style=”padding:4px 10px;font-size:12px” onclick=”enviarRutinaSemana('${p.id}',${wi})”>📲 Enviar semana</button>
+          <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--primary-light);flex-wrap:wrap">
+              <strong style="font-size:13px;color:var(--primary)">Semana ${wi + 1}</strong>
+              <button class="btn btn-sm btn-success" style="padding:4px 12px;font-size:12px" onclick="enviarRutinaSemana('${p.id}',${wi})">📲 Enviar semana</button>
             </div>
-            ${(dias || []).map((ej, di) => `
-              <div style=”padding:7px 0;border-top:1px solid var(--border)”>
-                <div style=”display:flex;align-items:center;justify-content:space-between;gap:8px”>
-                  <span style=”font-size:12px;font-weight:600;color:var(--text-muted)”>Día ${di + 1}</span>
-                  <button class=”btn btn-sm btn-secondary” style=”padding:3px 9px;font-size:11px” onclick=”enviarRutinaDia('${p.id}',${wi},${di})”>📲 Día</button>
-                </div>
-                <div style=”white-space:pre-wrap;font-size:13px;line-height:1.45;margin-top:3px”>${escapeHtml((ej || '').trim())}</div>
-              </div>`).join('')}
+            <div style="padding:2px 12px 10px">
+              ${(dias || []).map((ej, di) => `
+                <div style="padding:10px 0;${di ? 'border-top:1px solid var(--border);' : ''}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+                    <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--primary);background:var(--primary-light);padding:2px 9px;border-radius:20px">Día ${di + 1}</span>
+                    <button class="btn btn-sm btn-secondary" style="padding:3px 11px;font-size:11px" onclick="enviarRutinaDia('${p.id}',${wi},${di})">📲 Enviar</button>
+                  </div>
+                  <div style="white-space:pre-wrap;font-size:13.5px;line-height:1.5;color:var(--text)">${escapeHtml((ej || '').trim())}</div>
+                </div>`).join('')}
+            </div>
           </div>`).join('')}
       </div>`;
     })()}
