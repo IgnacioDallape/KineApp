@@ -3,7 +3,7 @@
 // con fallback a caché para que la app abra offline. Los CDN (Supabase, jsPDF)
 // van directo a la red (no se cachean acá).
 
-const CACHE = 'kineapp-v1';
+const CACHE = 'kineapp-v2';   // ⬆ subir este número en cada cambio fuerza que el PWA se actualice
 const SHELL = [
   './', './index.html',
   './assets/css/styles.css',
@@ -32,7 +32,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;   // CDN / APIs externas -> red directa
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })   // siempre revalidar con el servidor (evita quedar pegado en una versión vieja)
       .then(resp => {
         // Solo cacheamos respuestas OK (no 404/500/206/redirect) para no envenenar la caché.
         if (resp && resp.ok && resp.status === 200 && resp.type === 'basic') {
