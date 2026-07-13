@@ -933,13 +933,13 @@
 </div>
 
 <div class="modal-overlay" id="modal-ficha">
-  <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
-    <div class="modal-header">
+  <div class="modal" style="width:540px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modal-header" style="flex-shrink:0;margin-bottom:0">
       <h3>Ficha clínica individual</h3>
       <button class="modal-close" onclick="closeModal('modal-ficha')">✕</button>
     </div>
-    <div id="ficha-content"></div>
-    <div class="modal-actions">
+    <div id="ficha-content" style="flex:1;min-height:0;overflow-y:auto;padding:16px 0"></div>
+    <div class="modal-actions" style="flex-shrink:0;margin-top:0">
       <button class="btn btn-primary" onclick="imprimirFichaActual()">🖨 Imprimir para firmar</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-ficha')">Cerrar</button>
     </div>
