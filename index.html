@@ -352,7 +352,7 @@
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <div class="card-title" style="margin-bottom:0">&#127973; Obras sociales</div>
-          <button class="btn btn-sm btn-secondary" onclick="openModal('modal-obrasocial')">+ Agregar</button>
+          <button class="btn btn-sm btn-secondary" onclick="nuevaObraSocial()">+ Agregar</button>
         </div>
         <div id="obras-sociales-list"></div>
       </div>
@@ -539,7 +539,6 @@
       </div>
       <div id="pac-os-info" style="display:none;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px;font-size:13px;margin-bottom:12px">
         <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div><span style="color:var(--text-muted)">Cubre:</span> <strong id="pac-os-monto" style="color:var(--green)"></strong></div>
           <div><span style="color:var(--text-muted)">Coseguro a pagar:</span> <strong id="pac-os-adicional" style="color:var(--primary)"></strong></div>
           <div><span style="color:var(--text-muted)">Cálculo:</span> <strong id="pac-os-cobertura"></strong></div>
         </div>
@@ -739,27 +738,24 @@
 <div class="modal-overlay" id="modal-obrasocial">
   <div class="modal" style="width:440px">
     <div class="modal-header">
-      <h3>Nueva obra social</h3>
+      <h3 id="os-modal-title">Nueva obra social</h3>
       <button class="modal-close" onclick="closeModal('modal-obrasocial')">✕</button>
     </div>
     <div class="form-group">
       <label>Nombre de la obra social</label>
       <input class="form-control" id="os-nombre" placeholder="Nombre de la obra social">
     </div>
-    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">¿Cuánto te cubre? <span style="font-weight:400;text-transform:none">($ que paga la obra social)</span></label>
+    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em">Coseguro que paga el paciente <span style="font-weight:400;text-transform:none">($ que paga el paciente)</span></label>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Cargá el monto por sesión y/o por pack. Dejá en 0 los que no uses.</div>
     <div class="grid-3">
-      <div class="form-group"><label>Por sesión</label><input type="number" class="form-control" id="os-cubre-sesion" placeholder="0" min="0" oninput="updateCoseguroPreview()"></div>
-      <div class="form-group"><label>5 sesiones</label><input type="number" class="form-control" id="os-cubre-5" placeholder="0" min="0" oninput="updateCoseguroPreview()"></div>
-      <div class="form-group"><label>10 sesiones</label><input type="number" class="form-control" id="os-cubre-10" placeholder="0" min="0" oninput="updateCoseguroPreview()"></div>
+      <div class="form-group"><label>Por sesión</label><input type="number" class="form-control" id="os-cubre-sesion" placeholder="0" min="0"></div>
+      <div class="form-group"><label>5 sesiones</label><input type="number" class="form-control" id="os-cubre-5" placeholder="0" min="0"></div>
+      <div class="form-group"><label>10 sesiones</label><input type="number" class="form-control" id="os-cubre-10" placeholder="0" min="0"></div>
     </div>
-    <div class="grid-3">
-      <div class="form-group"><label>15 sesiones</label><input type="number" class="form-control" id="os-cubre-15" placeholder="0" min="0" oninput="updateCoseguroPreview()"></div>
-      <div class="form-group"><label>20 sesiones</label><input type="number" class="form-control" id="os-cubre-20" placeholder="0" min="0" oninput="updateCoseguroPreview()"></div>
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="form-group"><label>15 sesiones</label><input type="number" class="form-control" id="os-cubre-15" placeholder="0" min="0"></div>
+      <div class="form-group"><label>20 sesiones</label><input type="number" class="form-control" id="os-cubre-20" placeholder="0" min="0"></div>
       <div></div>
-    </div>
-    <div id="os-coseguro-preview" style="background:var(--green-light);border:1px solid #bbf7d0;border-radius:var(--radius-sm);padding:12px;font-size:13px;margin-bottom:16px;display:none">
-      <div style="font-weight:700;color:var(--green);text-transform:uppercase;font-size:11px;letter-spacing:.04em;margin-bottom:6px">Coseguro que paga el paciente <span style="font-weight:400;text-transform:none;color:var(--text-muted)">(tu tarifa − lo que cubre)</span></div>
-      <div id="os-coseguro-rows"></div>
     </div>
     <div class="form-group">
       <label>Servicios cubiertos <span style="color:var(--text-muted);font-weight:400">(opcional)</span></label>

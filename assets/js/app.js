@@ -1215,13 +1215,16 @@ function renderServicios() {
             <div style="font-weight:700;font-size:14px">${escapeHtml(os.nombre)}</div>
             <div style="font-size:12px;color:var(--text-muted);margin-top:1px">${escapeHtml(os.servicios)} · ${escapeHtml(os.contacto)}</div>
           </div>
-          <button onclick="eliminarObraSocial('${os.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px">✕</button>
+          <div style="display:flex;gap:2px">
+            <button onclick="editarObraSocial('${os.id}')" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px 4px">✏️</button>
+            <button onclick="eliminarObraSocial('${os.id}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px 4px">✕</button>
+          </div>
         </div>
         <div style="border-top:1px solid var(--border);padding:8px 14px;font-size:13px">
           ${(() => {
-            const packs = packsConTarifaDirecta();
-            if (!packs.length) return '<span style="color:var(--text-muted)">Cargá las tarifas (arriba) para ver el coseguro.</span>';
-            return packs.map(p => `<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text-muted)">${p}</span><span>cubre ${ars(cubrePack(os, p))} · <strong style="color:var(--primary)">coseguro ${ars(coseguroPack(os, p))}</strong></span></div>`).join('');
+            const rows = OS_COSEGURO_FIELDS.map(([, pack]) => pack).filter(pack => os.cubre && os.cubre[pack] > 0);
+            if (!rows.length) return '<span style="color:var(--text-muted)">Sin coseguro cargado. Tocá ✏️ para agregarlo.</span>';
+            return rows.map(pack => `<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text-muted)">${pack}</span><span style="color:var(--text-muted)">coseguro <strong style="color:var(--primary)">${ars(os.cubre[pack])}</strong></span></div>`).join('');
           })()}
         </div>
       </div>`).join('');
@@ -1246,18 +1249,40 @@ async function eliminarTarifa(id) {
   renderServicios();
 }
 
+let editingOsId = null;
+const OS_FORM_IDS = ['os-nombre', 'os-servicios', 'os-contacto', 'os-cubre-sesion', 'os-cubre-5', 'os-cubre-10', 'os-cubre-15', 'os-cubre-20'];
+function _limpiarFormOS() { OS_FORM_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); }
+function nuevaObraSocial() {
+  editingOsId = null;
+  _limpiarFormOS();
+  const t = document.getElementById('os-modal-title'); if (t) t.textContent = 'Nueva obra social';
+  openModal('modal-obrasocial');
+}
+function editarObraSocial(id) {
+  const os = state.obrasSociales.find(x => x.id === id);
+  if (!os) return;
+  editingOsId = id;
+  document.getElementById('os-nombre').value = os.nombre || '';
+  document.getElementById('os-servicios').value = os.servicios || '';
+  document.getElementById('os-contacto').value = os.contacto || '';
+  const c = os.cubre || {};
+  OS_COSEGURO_FIELDS.forEach(([elId, pack]) => { const el = document.getElementById(elId); if (el) el.value = c[pack] || ''; });
+  const t = document.getElementById('os-modal-title'); if (t) t.textContent = 'Editar obra social';
+  openModal('modal-obrasocial');
+}
 async function guardarObraSocial() {
   const nombre = document.getElementById('os-nombre').value.trim();
   if (!nombre) { alert('Ingresá el nombre'); return; }
-  await store.add('obrasSociales', {
+  const datos = {
     nombre,
-    cubre: leerCubreOS(),
+    cubre: leerCoseguroOS(),   // guarda el COSEGURO directo (lo que paga el paciente) por pack
     servicios: document.getElementById('os-servicios').value,
     contacto: document.getElementById('os-contacto').value
-  });
-  ['os-nombre', 'os-servicios', 'os-contacto', 'os-cubre-sesion', 'os-cubre-5', 'os-cubre-10', 'os-cubre-15', 'os-cubre-20']
-    .forEach(id => document.getElementById(id).value = '');
-  document.getElementById('os-coseguro-preview').style.display = 'none';
+  };
+  if (editingOsId) await store.update('obrasSociales', editingOsId, datos);
+  else await store.add('obrasSociales', datos);
+  editingOsId = null;
+  _limpiarFormOS();
   closeModal('modal-obrasocial'); renderServicios();
 }
 async function eliminarObraSocial(id) {
@@ -1534,7 +1559,9 @@ function onCoberturaChange() {
   if (hint) hint.style.display = esOS ? 'none' : 'block';
 }
 const PACKS = ['Por sesión', 'Pack 4 sesiones', 'Pack 5 sesiones', 'Pack 6 sesiones', 'Pack 8 sesiones', 'Pack 10 sesiones', 'Pack 12 sesiones', 'Pack 15 sesiones', 'Pack 20 sesiones'];
-const OS_CUBRE_FIELDS = [
+// Campos del form de OS -> pack. Guardan el COSEGURO (lo que paga el paciente) por pack.
+// (Los ids siguen llamándose os-cubre-* por compatibilidad con el HTML.)
+const OS_COSEGURO_FIELDS = [
   ['os-cubre-sesion', 'Por sesión'], ['os-cubre-5', 'Pack 5 sesiones'], ['os-cubre-10', 'Pack 10 sesiones'],
   ['os-cubre-15', 'Pack 15 sesiones'], ['os-cubre-20', 'Pack 20 sesiones'],
 ];
@@ -1552,15 +1579,12 @@ function precioPack(concepto, servicio) {
   if (directo > 0) return directo;
   return tarifaDePack('Por sesión', servicio) * (PACK_SESIONES[concepto] || 1);
 }
-// Lo que cubre la OS para el pack: monto directo, o (cubre por sesión × N).
-function cubrePack(os, concepto) {
+// Coseguro de un pack = lo que paga el paciente. Se carga DIRECTO en la ficha de la
+// obra social (os.cubre guarda el coseguro por pack). Fallback: coseguro por sesión × N.
+function coseguroPack(os, concepto) {
   const c = (os && os.cubre) || {};
   if (c[concepto] > 0) return c[concepto];
   return (c['Por sesión'] || 0) * (PACK_SESIONES[concepto] || 1);
-}
-// Coseguro de un pack = precio − lo que cubre la obra social.
-function coseguroPack(os, concepto, servicio) {
-  return Math.max(0, precioPack(concepto, servicio) - cubrePack(os, concepto));
 }
 // Packs que tienen precio (tarifa directa o derivada de "por sesión").
 function packsConPrecio(servicio) {
@@ -1571,31 +1595,13 @@ function packsConPrecio(servicio) {
 function packsConTarifaDirecta(servicio) {
   return PACKS.filter(p => tarifaDePack(p, servicio) > 0);
 }
-function leerCubreOS() {
-  const cubre = {};
-  OS_CUBRE_FIELDS.forEach(([id, pack]) => { cubre[pack] = parseInt(document.getElementById(id).value) || 0; });
-  return cubre;
+function leerCoseguroOS() {
+  const cose = {};
+  OS_COSEGURO_FIELDS.forEach(([id, pack]) => { cose[pack] = parseInt(document.getElementById(id).value) || 0; });
+  return cose;
 }
 function packDeSesiones(n) {
   return ({ 4: 'Pack 4 sesiones', 5: 'Pack 5 sesiones', 6: 'Pack 6 sesiones', 8: 'Pack 8 sesiones', 10: 'Pack 10 sesiones', 12: 'Pack 12 sesiones', 15: 'Pack 15 sesiones', 20: 'Pack 20 sesiones' })[n] || null;
-}
-
-// Preview en vivo: coseguro (tarifa − cubre) por cada pack que tenga tarifa cargada.
-function updateCoseguroPreview() {
-  const osTmp = { cubre: leerCubreOS() };
-  const box = document.getElementById('os-coseguro-preview');
-  const rowsEl = document.getElementById('os-coseguro-rows');
-  if (!box || !rowsEl) return;
-  const packs = packsConTarifaDirecta();
-  if (!packs.length) {
-    rowsEl.innerHTML = '<span style="color:var(--text-muted)">Cargá primero las tarifas (Servicios → Tarifas) para que el coseguro se calcule solo.</span>';
-  } else {
-    rowsEl.innerHTML = packs.map(p => {
-      const precio = precioPack(p), cubre = cubrePack(osTmp, p), cose = Math.max(0, precio - cubre);
-      return `<div style="display:flex;justify-content:space-between;padding:2px 0"><span>${p}</span><span><strong>${ars(cose)}</strong> <span style="color:var(--text-muted)">(${ars(precio)} − ${ars(cubre)})</span></span></div>`;
-    }).join('');
-  }
-  box.style.display = 'block';
 }
 
 // En el alta, sugiere el "Total a pagar" = coseguro del pack que corresponde a las sesiones.
@@ -1603,13 +1609,10 @@ function sugerirTotalPagar() {
   if (document.getElementById('pac-cobertura').value !== 'obra_social') return;
   const os = state.obrasSociales.find(x => x.id === document.getElementById('pac-os-select').value);
   if (!os) return;
-  const servicio = document.getElementById('pac-servicio').value;
   const ses = parseInt(document.getElementById('pac-sesiones-auth').value) || 0;
   const pack = packDeSesiones(ses);
-  // Pack 5/10/15/20 con precio -> su coseguro; si no, por sesión × N.
-  const total = (pack && precioPack(pack, servicio) > 0)
-    ? coseguroPack(os, pack, servicio)
-    : coseguroPack(os, 'Por sesión', servicio) * ses;
+  // Coseguro del pack que corresponde; si no hay pack exacto, coseguro por sesión × N.
+  const total = pack ? coseguroPack(os, pack) : coseguroPack(os, 'Por sesión') * ses;
   document.getElementById('pac-total-pagar').value = total;
 }
 
@@ -1617,16 +1620,11 @@ function onObrasSocialChange() {
   const os = state.obrasSociales.find(x => x.id === document.getElementById('pac-os-select').value);
   const infoDiv = document.getElementById('pac-os-info');
   if (os) {
-    const servicio = document.getElementById('pac-servicio').value;
     const ses = parseInt(document.getElementById('pac-sesiones-auth').value) || 0;
     const pack = packDeSesiones(ses);
-    const usaPack = pack && precioPack(pack, servicio) > 0;
-    // "Cubre" y "Coseguro" se escalan igual (× N en la ruta por-sesión) para que cierren con el precio total.
-    const cubreTotal = usaPack ? cubrePack(os, pack) : cubrePack(os, 'Por sesión') * (ses || 1);
-    const total = usaPack ? coseguroPack(os, pack, servicio) : coseguroPack(os, 'Por sesión', servicio) * (ses || 1);
-    document.getElementById('pac-os-monto').textContent = ars(cubreTotal);
+    const total = pack ? coseguroPack(os, pack) : coseguroPack(os, 'Por sesión') * (ses || 1);
     document.getElementById('pac-os-adicional').textContent = ars(total);
-    document.getElementById('pac-os-cobertura').textContent = usaPack ? pack : (ses ? `por sesión × ${ses}` : 'por sesión');
+    document.getElementById('pac-os-cobertura').textContent = pack ? pack : (ses ? `por sesión × ${ses}` : 'por sesión');
     infoDiv.style.display = 'block';
     sugerirTotalPagar();
   } else { infoDiv.style.display = 'none'; }
@@ -1648,7 +1646,6 @@ function openModal(id) {
     if (!document.getElementById('turno-fecha').value)
       document.getElementById('turno-fecha').value = ymd(new Date());
   }
-  if (id === 'modal-obrasocial') updateCoseguroPreview();
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(m => {
@@ -2442,8 +2439,7 @@ function verPaciente(id) {
     ${obraSocial ? (() => {
       const ses = p.sesionesAuth || 0;
       const pack = packDeSesiones(ses);
-      const usaPack = pack && precioPack(pack, p.servicio) > 0;
-      const total = usaPack ? coseguroPack(obraSocial, pack, p.servicio) : coseguroPack(obraSocial, 'Por sesión', p.servicio) * (ses || 1);
+      const total = pack ? coseguroPack(obraSocial, pack) : coseguroPack(obraSocial, 'Por sesión') * (ses || 1);
       return `<div style="margin-top:12px;padding:12px;border-radius:10px;background:var(--primary-light);border:1px solid var(--primary-soft);font-size:13px"><strong>${escapeHtml(obraSocial.nombre)}</strong> · <span style="color:var(--primary);font-weight:600">Coseguro ${ars(total)}${ses ? ` (${ses} ses.)` : ''}</span></div>`;
     })() : ''}`;
 
