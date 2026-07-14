@@ -1032,38 +1032,64 @@ function _pacRutinaSemanas(p) {
   const plan = p && p.evalClinica && p.evalClinica.rutinaPlan;
   return (plan && Array.isArray(plan.semanas)) ? plan.semanas : null;
 }
-function _rutinaWppAbrir(p, cuerpo) {
+// Envía la rutina como PDF: en el celu se comparte el archivo (aparece WhatsApp en el menú);
+// en compu cae a descargar el PDF + abrir WhatsApp con un texto.
+async function _enviarRutinaPDF(p, bloques, scopeLabel) {
   const tel = telWhatsApp(p.tel);
-  if (!tel) { alert('Este paciente no tiene teléfono cargado.\nAgregalo en la ficha para poder enviarle la rutina.'); return; }
   const nombre = (p.nombre || '').split(' ')[0];
-  const msg = `Hola ${nombre}, te paso tu rutina de ejercicios:\n\n${cuerpo}\n\nCualquier duda, escribinos. ¡Éxitos! 💪`;
-  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
+  const texto = `Hola${nombre ? ' ' + nombre : ''}, te paso tu rutina de ejercicios (PDF adjunto). Cualquier duda, escribinos. ¡Éxitos! 💪`;
+
+  // 1) Preferido: compartir el PDF como ARCHIVO.
+  if (window.jspdf && window.generarRutinaPDF && navigator.canShare) {
+    try {
+      const out = window.generarRutinaPDF(p, { bloques, scopeLabel, output: 'blob' });
+      if (out && out.blob) {
+        const file = new File([out.blob], out.filename, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: out.filename, text: texto });
+          return;
+        }
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;   // el usuario cerró el menú de compartir
+    }
+  }
+
+  // 2) Plan B (compu): descargamos el PDF y abrimos WhatsApp con el texto.
+  try { if (window.jspdf && window.generarRutinaPDF) window.generarRutinaPDF(p, { bloques, scopeLabel }); } catch (e) {}
+  if (!tel) { alert('Descargamos la rutina en PDF. Este paciente no tiene teléfono cargado para abrir WhatsApp.'); return; }
+  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(texto + '\n\n(Te adjuntamos la rutina en PDF: sumá el archivo que acabamos de descargar.)')}`);
 }
 function enviarRutinaDia(id, wi, di) {
   const p = _pacById(id); if (!p) return;
   const semanas = _pacRutinaSemanas(p);
   const ej = semanas && semanas[wi] && (semanas[wi][di] || '').trim();
   if (!ej) { alert('Ese día no tiene ejercicios cargados.'); return; }
-  _rutinaWppAbrir(p, `Semana ${wi + 1} · Día ${di + 1}\n${ej}`);
+  _enviarRutinaPDF(p, [{ semanaLabel: `Semana ${wi + 1}`, dias: [{ diaLabel: `Día ${di + 1}`, texto: ej }] }], `Semana ${wi + 1} · Día ${di + 1}`);
 }
 function enviarRutinaSemana(id, wi) {
   const p = _pacById(id); if (!p) return;
   const semanas = _pacRutinaSemanas(p);
   const dias = semanas && semanas[wi];
   if (!dias || !dias.length) { alert('Esa semana no tiene días cargados.'); return; }
-  const cuerpo = `Semana ${wi + 1}\n\n` + dias.map((ej, di) => `Día ${di + 1}\n${(ej || '').trim()}`).filter(Boolean).join('\n\n');
-  _rutinaWppAbrir(p, cuerpo);
+  const bloque = { semanaLabel: `Semana ${wi + 1}`, dias: dias.map((ej, di) => ({ diaLabel: `Día ${di + 1}`, texto: (ej || '').trim() })) };
+  if (!bloque.dias.some(d => d.texto)) { alert('Esa semana no tiene ejercicios cargados.'); return; }
+  _enviarRutinaPDF(p, [bloque], `Semana ${wi + 1}`);
 }
 function enviarRutinaWpp(id) {   // enviar TODA la rutina
   const p = _pacById(id); if (!p) return;
   const semanas = _pacRutinaSemanas(p);
   if (semanas && semanas.length) {
-    const cuerpo = semanas.map((dias, wi) => `SEMANA ${wi + 1}\n\n` + (dias || []).map((ej, di) => `Día ${di + 1}\n${(ej || '').trim()}`).join('\n\n')).join('\n\n\n');
-    _rutinaWppAbrir(p, cuerpo); return;
+    const bloques = semanas.map((dias, wi) => ({
+      semanaLabel: `Semana ${wi + 1}`,
+      dias: (dias || []).map((ej, di) => ({ diaLabel: `Día ${di + 1}`, texto: (ej || '').trim() }))
+    }));
+    if (!bloques.some(b => b.dias.some(d => d.texto))) { alert('Este paciente no tiene ejercicios cargados en la rutina.'); return; }
+    _enviarRutinaPDF(p, bloques, ''); return;
   }
   const rutinaVieja = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
   if (!rutinaVieja) { alert('Este paciente no tiene una rutina cargada.\nEditá la ficha y agregala en "Rutina de ejercicios".'); return; }
-  _rutinaWppAbrir(p, rutinaVieja);
+  _enviarRutinaPDF(p, [{ semanaLabel: null, dias: [{ diaLabel: null, texto: rutinaVieja }] }], '');
 }
 
 // Manda al paciente, por WhatsApp, TODOS sus turnos agendados a futuro (fecha + hora).
