@@ -1885,6 +1885,21 @@ function editarPaciente(id) {
   document.getElementById('btn-guardar-paciente').textContent = 'Guardar cambios';
 }
 
+// Abre "Editar paciente" y salta directo al armador de rutina (por semanas/días).
+function editarRutina(id) {
+  editarPaciente(id);
+  setTimeout(() => {
+    const el = document.getElementById('pac-rutina-builder');
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // resaltado breve para ubicar la sección
+    const prev = el.style.boxShadow;
+    el.style.transition = 'box-shadow .25s';
+    el.style.boxShadow = '0 0 0 3px var(--primary-soft)';
+    setTimeout(() => { el.style.boxShadow = prev || ''; }, 1300);
+  }, 160);
+}
+
 // --- Evaluación física / kinesiológica (sección 4 del alta) ---
 const EVAL_OBS = [
   ['marcha', 'Marcha alterada'], ['postura', 'Postura alterada'], ['asimetrias', 'Asimetrías visibles'],
@@ -2505,13 +2520,18 @@ function verPaciente(id) {
     const semanas = (plan && Array.isArray(plan.semanas) && plan.semanas.length) ? plan.semanas : null;
     const rutinaVieja = ((p.evalClinica && p.evalClinica.rutina) || '').trim();
     if (!semanas && !rutinaVieja) {
-      return `<div style="font-size:14px;color:var(--text-muted)">Sin rutina cargada. Tocá "Editar ficha" para armarla por semanas y días.</div>`;
+      return `<div style="font-size:14px;color:var(--text-muted);margin-bottom:12px">Todavía no hay una rutina cargada. Armala por semanas y días.</div>
+        <button class="btn btn-sm btn-primary" onclick="editarRutina('${p.id}')">➕ Armar rutina</button>`;
     }
     if (!semanas) { // compat: rutina vieja de texto plano
-      return `<div style="margin-bottom:10px"><button class="btn btn-sm btn-success" style="display:inline-flex;align-items:center;gap:6px" onclick="enviarRutinaWpp('${p.id}')">${waIcon()} Enviar por WhatsApp</button></div>
+      return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn btn-sm btn-success" style="display:inline-flex;align-items:center;gap:6px" onclick="enviarRutinaWpp('${p.id}')">${waIcon()} Enviar por WhatsApp</button>
+          <button class="btn btn-sm btn-secondary" onclick="editarRutina('${p.id}')">✏️ Editar rutina</button></div>
         <div style="white-space:pre-wrap;font-size:14px;line-height:1.5">${escapeHtml(rutinaVieja)}</div>`;
     }
-    return `<div style="margin-bottom:12px"><button class="btn btn-sm btn-success" style="display:inline-flex;align-items:center;gap:6px" onclick="enviarRutinaWpp('${p.id}')">${waIcon()} Enviar todo</button></div>
+    return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-sm btn-success" style="display:inline-flex;align-items:center;gap:6px" onclick="enviarRutinaWpp('${p.id}')">${waIcon()} Enviar todo</button>
+        <button class="btn btn-sm btn-secondary" onclick="editarRutina('${p.id}')">✏️ Editar rutina</button></div>
       ${semanas.map((dias, wi) => `
         <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--primary-light);flex-wrap:wrap">
