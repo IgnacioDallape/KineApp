@@ -2375,35 +2375,16 @@ function _informeCtx(p) {
   };
 }
 
-async function compartirInformeWhatsApp(id) {
+// El informe va por WhatsApp POR ESCRITO (texto), directo al número de la ficha.
+function compartirInformeWhatsApp(id) {
   const p = obtenerPacienteInforme(id);
   if (!p) return;
   const tel = telWhatsApp(p.tel);
+  if (!tel) { alert('Este paciente no tiene teléfono cargado.\nAgregalo en la ficha para poder enviarle el informe.'); return; }
   const nombre1 = (p.nombre || '').trim().split(/\s+/)[0];
-  const mensaje = `Hola${nombre1 ? ' ' + nombre1 : ''}, te compartimos tu informe de plan de rehabilitación y progresión.`;
-  let out = null;
-  try { if (window.jspdf && window.generarInformePDF) out = window.generarInformePDF(p, Object.assign(_informeCtx(p), { output: 'blob' })); } catch (e) {}
-
-  // A) Directo al número de la ficha: subimos el PDF y abrimos el chat con el link.
-  if (tel && store.isCloud && store._sb && out) {
-    if (await _enviarPDFLinkWpp(p, out, mensaje, 'informes')) return;
-    try { window.generarInformePDF(p, _informeCtx(p)); } catch (e) {}
-    abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje + '\n\n(No pudimos generar el link; te descargamos el PDF, adjuntalo en el chat.)')}`);
-    return;
-  }
-
-  // B) Sin número o sin nube: compartir el PDF como archivo (gesto intacto).
-  if (out && navigator.canShare) {
-    try {
-      const file = new File([out.blob], out.filename, { type: 'application/pdf' });
-      if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: out.filename, text: mensaje }); return; }
-    } catch (err) { if (err && err.name === 'AbortError') return; }
-  }
-
-  // C) Último recurso: descargar el PDF + abrir WhatsApp con texto.
-  try { if (window.jspdf && window.generarInformePDF) window.generarInformePDF(p, _informeCtx(p)); } catch (e) {}
-  if (!tel) { alert('Descargamos el PDF del informe. Este paciente no tiene teléfono cargado para abrir WhatsApp.'); return; }
-  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje + '\n\nAcabamos de descargar el PDF; adjuntalo en el chat.')}`);
+  const intro = `Hola${nombre1 ? ' ' + nombre1 : ''}, te compartimos tu informe de plan de rehabilitación y progresión.`;
+  const texto = `${intro}\n\n${generarInformePacienteTexto(p)}`;
+  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`);
 }
 // Texto de presentación que va en el cuerpo del mail (antes del PDF adjunto).
 function _informePresentacionMail(p) {
