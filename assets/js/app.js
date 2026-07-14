@@ -279,6 +279,11 @@ function waIcon(size) {
   size = size || 15;
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" style="vertical-align:-3px;flex-shrink:0" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.359.101 11.892c0 2.096.546 4.142 1.588 5.945L0 24l6.335-1.652a11.882 11.882 0 005.71 1.454h.006c6.585 0 11.946-5.36 11.949-11.945a11.821 11.821 0 00-3.495-8.418"/></svg>`;
 }
+// Ícono de sobre (mail). Hereda el color del texto del botón (fill:currentColor).
+function mailIcon(size) {
+  size = size || 15;
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" style="vertical-align:-3px;flex-shrink:0" aria-hidden="true"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>`;
+}
 function servicioColor(serv) {
   return ({ 'Rehabilitación': 'blue', 'Readaptación': 'teal', 'Pilates': 'purple', 'Recovery': 'orange', 'Entrenamiento funcional': 'green' })[serv] || 'gray';
 }
@@ -2482,10 +2487,15 @@ function verPaciente(id) {
       </div>
     </div>
     <div class="ficha-actions">
-      <button class="btn btn-primary" onclick="editarPaciente('${p.id}')">✏️ Editar ficha</button>
-      <button class="btn btn-secondary" onclick="abrirInformePaciente('${p.id}')">Ver informe de progreso</button>
-      <button class="btn btn-success" style="display:inline-flex;align-items:center;gap:6px" onclick="compartirInformeWhatsApp('${p.id}')">${waIcon()} Enviar por WhatsApp</button>
-      <button class="btn btn-secondary" onclick="compartirInformeMail('${p.id}')">Enviar por mail</button>
+      <div class="fa-group">
+        <button class="btn btn-primary" onclick="editarPaciente('${p.id}')">✏️ Editar ficha</button>
+        <button class="btn btn-secondary" onclick="abrirInformePaciente('${p.id}')">📄 Ver informe</button>
+      </div>
+      <div class="fa-group fa-share">
+        <span class="fa-send-label">Compartir:</span>
+        <button class="btn btn-success" onclick="compartirInformeWhatsApp('${p.id}')">${waIcon()} WhatsApp</button>
+        <button class="btn btn-mail" onclick="compartirInformeMail('${p.id}')">${mailIcon()} Mail</button>
+      </div>
     </div>
     <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div style="flex:1;min-width:70px;text-align:center;background:var(--primary-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--primary)">${p.sesiones}</div><div style="font-size:12px;color:var(--text-muted)">realizadas</div></div>

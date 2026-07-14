@@ -471,9 +471,21 @@
   }
   .ficha-actions {
     display: flex;
-    gap: 8px;
+    gap: 10px 16px;
     flex-wrap: wrap;
-    margin-bottom: 16px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .ficha-actions .btn { gap: 7px; min-height: 36px; }
+  .fa-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .fa-send-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .btn-mail { background: var(--primary-light); color: var(--primary); }
+  .btn-mail:hover { background: var(--primary-soft); }
+  @media (max-width: 860px) {
+    .ficha-actions { gap: 10px; }
+    .fa-group { flex: 1 1 100%; }
+    .fa-send-label { flex-basis: 100%; margin-bottom: -2px; }
+    .fa-group .btn { flex: 1 1 calc(50% - 4px); justify-content: center; }
   }
   .report-preview {
     white-space: pre-wrap;

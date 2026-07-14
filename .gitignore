@@ -1,0 +1,16 @@
+# Dependencias / build
+node_modules/
+dist/
+.vercel/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# PDFs generados/descargados (no van al repo)
+Instructivo-kinesico-SPORT.pdf
+Informe*.pdf
+
+# Temporales
+tmp_*
+*.tmp
