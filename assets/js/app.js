@@ -1046,82 +1046,32 @@ function _pacRutinaSemanas(p) {
   return (plan && Array.isArray(plan.semanas)) ? plan.semanas : null;
 }
 
-// ===== Compartir PDF por WhatsApp DIRECTO al número (sube a Supabase Storage y manda el link) =====
-const _PDF_BUCKET = 'documentos';
-const _PDF_LINK_EXPIRY = 60 * 60 * 24 * 60;   // link válido 60 días
-
-function _miniToast(msg) {
-  try {
-    const el = document.createElement('div');
-    el.textContent = msg;
-    el.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:4000;background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:88%;text-align:center';
-    document.body.appendChild(el);
-    return { close: () => { try { el.remove(); } catch (_) {} } };
-  } catch (_) { return { close: () => {} }; }
-}
-function _uuid() {
-  try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (_) {}
-  return Date.now().toString(36) + '-' + Math.random().toString(16).slice(2);
-}
-// Sube el blob al bucket privado y devuelve un link firmado (o null si no se pudo).
-async function _subirPDFyLink(out, carpeta) {
-  try {
-    if (!store.isCloud || !store._sb || !out || !out.blob) return null;
-    const path = `${carpeta}/${_uuid()}.pdf`;
-    const up = await store._sb.storage.from(_PDF_BUCKET).upload(path, out.blob, { contentType: 'application/pdf', upsert: false });
-    if (up.error) { console.error('[KineApp] subir PDF:', up.error.message || up.error); return null; }
-    const sig = await store._sb.storage.from(_PDF_BUCKET).createSignedUrl(path, _PDF_LINK_EXPIRY);
-    if (sig.error || !sig.data || !sig.data.signedUrl) { console.error('[KineApp] firmar link:', sig.error); return null; }
-    return sig.data.signedUrl;
-  } catch (e) { console.error('[KineApp] _subirPDFyLink:', e); return null; }
-}
-// Sube el PDF, arma el link y abre WhatsApp DIRECTO al número. true si se envió; false para caer al fallback.
-async function _enviarPDFLinkWpp(p, out, mensajeBase, carpeta) {
-  const tel = telWhatsApp(p.tel);
-  if (!tel || !store.isCloud || !store._sb || !out || !out.blob) return false;
-  // Pre-abrimos la pestaña dentro del gesto del usuario (iOS bloquea window.open después de un await).
-  let waTab = null;
-  try { waTab = window.open('', '_blank'); } catch (_) {}
-  const tt = _miniToast('Preparando el PDF…');
-  const url = await _subirPDFyLink(out, carpeta);
-  tt.close();
-  if (!url) { if (waTab) { try { waTab.close(); } catch (_) {} } return false; }
-  const texto = `${mensajeBase}\n\nDescargalo acá 👇\n${url}`;
-  const waUrl = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
-  if (waTab && !waTab.closed) { try { waTab.location.href = waUrl; } catch (_) { abrirWhatsAppUrl(waUrl); } }
-  else abrirWhatsAppUrl(waUrl);
-  return true;
-}
-// Envía la rutina como PDF. Preferido: DIRECTO al número de la ficha (sube el PDF y manda el link).
-// Fallbacks: compartir el archivo (elegís contacto) o descargar + abrir WhatsApp con texto.
+// Envía la rutina como PDF ADJUNTO por WhatsApp: el archivo queda dentro del chat,
+// sin links ni descargas — el paciente no tiene que ir a ningún lado.
 async function _enviarRutinaPDF(p, bloques, scopeLabel) {
   const tel = telWhatsApp(p.tel);
   const nombre = (p.nombre || '').split(' ')[0];
   const mensaje = `Hola${nombre ? ' ' + nombre : ''}, te paso tu rutina de ejercicios. Cualquier duda, escribinos. ¡Éxitos! 💪`;
   let out = null;
   try { if (window.jspdf && window.generarRutinaPDF) out = window.generarRutinaPDF(p, { bloques, scopeLabel, output: 'blob' }); } catch (e) {}
+  if (!out || !out.blob) { alert('No se pudo generar el PDF de la rutina. Revisá tu conexión e intentá de nuevo.'); return; }
 
-  // A) Directo al número: subimos el PDF y abrimos el chat con el link.
-  if (tel && store.isCloud && store._sb && out) {
-    if (await _enviarPDFLinkWpp(p, out, mensaje, 'rutinas')) return;
-    // subida falló -> descargamos y abrimos el chat igual (adjuntar a mano)
-    try { window.generarRutinaPDF(p, { bloques, scopeLabel }); } catch (e) {}
-    abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje + '\n\n(No pudimos generar el link; te descargamos el PDF, adjuntalo en el chat.)')}`);
-    return;
-  }
-
-  // B) Sin número o sin nube: compartir el PDF como archivo (gesto intacto, sin await previo).
-  if (out && navigator.canShare) {
+  // 1) Preferido (celular): adjuntar el PDF de verdad. En el menú de compartir elegís
+  //    WhatsApp y el archivo queda en el chat — sin links, sin abrir nada.
+  if (navigator.canShare) {
     try {
       const file = new File([out.blob], out.filename, { type: 'application/pdf' });
-      if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: out.filename, text: mensaje }); return; }
-    } catch (err) { if (err && err.name === 'AbortError') return; }
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: out.filename, text: mensaje });
+        return;
+      }
+    } catch (err) { if (err && err.name === 'AbortError') return; }   // cerró el menú de compartir
   }
 
-  // C) Último recurso: descargar el PDF + abrir WhatsApp con texto.
-  try { if (window.jspdf && window.generarRutinaPDF) window.generarRutinaPDF(p, { bloques, scopeLabel }); } catch (e) {}
+  // 2) Fallback (compu sin compartir archivos): descargamos el PDF y abrimos WhatsApp con el mensaje.
+  try { window.generarRutinaPDF(p, { bloques, scopeLabel }); } catch (e) {}
   if (!tel) { alert('Descargamos la rutina en PDF. Este paciente no tiene teléfono cargado para abrir WhatsApp.'); return; }
-  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje + '\n\n(Te adjuntamos la rutina en PDF: sumá el archivo que acabamos de descargar.)')}`);
+  abrirWhatsAppUrl(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje + '\n\n(Adjuntamos la rutina en PDF: sumá el archivo que acabamos de descargar.)')}`);
 }
 function enviarRutinaDia(id, wi, di) {
   const p = _pacById(id); if (!p) return;
