@@ -290,6 +290,19 @@ function servicioColor(serv) {
 function servicioEmoji(serv) {
   return ({ 'Rehabilitación': '🦴', 'Readaptación': '🏃', 'Pilates': '🧘', 'Recovery': '❄️', 'Entrenamiento funcional': '💪' })[serv] || '📋';
 }
+// Ícono SVG (línea) por servicio, coloreado con el acento del servicio.
+const SERVICIO_ICONOS = {
+  'Rehabilitación':          { icon: 'bone',       color: 'var(--primary)' },
+  'Readaptación':            { icon: 'footprints', color: 'var(--teal)' },
+  'Pilates':                 { icon: 'persona',    color: 'var(--purple)' },
+  'Recovery':                { icon: 'snowflake',  color: 'var(--orange)' },
+  'Entrenamiento funcional': { icon: 'dumbbell',   color: 'var(--green)' },
+};
+function servicioIcon(serv, size) {
+  const s = SERVICIO_ICONOS[serv] || { icon: 'clipboard', color: 'var(--text-muted)' };
+  const svg = window.kicon ? kicon(s.icon, size || 18) : '';
+  return `<span class="serv-ico" style="color:${s.color};display:inline-flex;align-items:center;justify-content:center">${svg}</span>`;
+}
 
 // ===== DASHBOARD =====
 function renderDashboard() {
@@ -309,7 +322,7 @@ function renderDashboard() {
     ? '<p style="color:var(--text-muted);font-size:13px;padding:8px 0">No hay turnos para hoy</p>'
     : turnosHoy.slice(0, 5).map(t => `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:20px;width:28px;text-align:center">${servicioEmoji(t.servicio)}</span>
+        <span style="width:28px;display:inline-flex;justify-content:center">${servicioIcon(t.servicio, 20)}</span>
         <div style="flex:1">
           <div style="font-weight:500;font-size:14px">${escapeHtml(t.paciente)}</div>
           <div style="font-size:12px;color:var(--text-muted)">${t.hora} · ${escapeHtml(t.prof)}</div>
@@ -341,7 +354,7 @@ function renderDashboard() {
       const r = p.sesionesAuth - p.sesiones;
       return `
         <div style="background:${r === 0 ? 'var(--red-light)' : 'var(--orange-light)'};border:1px solid ${r === 0 ? '#fecaca' : '#fed7aa'};border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:20px">${r === 0 ? '⛔' : '⚠️'}</span>
+          <span style="display:inline-flex;color:${r === 0 ? 'var(--red)' : 'var(--orange)'}">${window.kicon ? kicon(r === 0 ? 'bloqueado' : 'alerta', 20) : ''}</span>
           <div style="flex:1"><strong>${escapeHtml(p.nombre)}</strong> —
             ${r === 0 ? '<span style="color:var(--red)">Agotó todas sus sesiones autorizadas</span>'
                       : '<span style="color:var(--orange)">Le queda <strong>1 sesión</strong> autorizada</span>'}</div>
@@ -474,7 +487,7 @@ function mostrarTurno(id) {
     : t.asistencia === 'reprog' ? '🔄 Reprogramado' : '— Pendiente';
   document.getElementById('turno-detalle-content').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div style="font-size:32px">${servicioEmoji(t.servicio)}</div>
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">${servicioIcon(t.servicio, 24)}</div>
       <div>
         <div style="font-size:17px;font-weight:600">${escapeHtml(t.paciente)}</div>
         <div style="font-size:13px;color:var(--text-muted)">${escapeHtml(t.prof)}</div>
@@ -735,7 +748,7 @@ function renderAsistencia() {
   list.innerHTML = turnosDia.map(t => `
     <div class="asist-row">
       <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-size:22px">${servicioEmoji(t.servicio)}</span>
+        <span style="display:inline-flex">${servicioIcon(t.servicio, 22)}</span>
         <div>
           <div style="font-weight:500">${escapeHtml(t.paciente)}</div>
           <div style="font-size:12px;color:var(--text-muted)">${t.hora} · ${t.duracion}min · ${escapeHtml(t.prof)}</div>
@@ -1403,7 +1416,7 @@ function verServicio(servId) {
         <div class="servicio-pac-item" id="spac-${p.id}">
           <div class="servicio-pac-header" onclick="toggleServicioPac('${p.id}')">
             <div style="display:flex;align-items:center;gap:12px">
-              <div style="width:38px;height:38px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${servicioEmoji(p.servicio)}</div>
+              <div style="width:38px;height:38px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">${servicioIcon(p.servicio, 19)}</div>
               <div>
                 <div style="font-weight:600;font-size:14px">${escapeHtml(p.nombre)}</div>
                 <div style="font-size:12px;color:var(--text-muted)">${escapeHtml(p.lesion || 'Sin lesión registrada')} · ${escapeHtml(p.prof)}</div>
@@ -2543,7 +2556,7 @@ function verPaciente(id) {
     ? '<p style="color:var(--text-muted);font-size:13px">Sin turnos registrados</p>'
     : turnPac.slice(-5).reverse().map(t => `
         <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
-          <span style="font-size:16px">${servicioEmoji(t.servicio)}</span>
+          <span style="display:inline-flex">${servicioIcon(t.servicio, 16)}</span>
           <div style="flex:1"><div style="font-size:13px;font-weight:500">${t.fecha} · ${t.hora}</div>
             <div style="font-size:12px;color:var(--text-muted)">${escapeHtml(t.prof)} · ${t.duracion}min</div></div>
           ${asistBadge(t.asistencia)}
@@ -2551,7 +2564,7 @@ function verPaciente(id) {
 
   document.getElementById('ficha-content').innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
-      <div style="width:52px;height:52px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${servicioEmoji(p.servicio)}</div>
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">${servicioIcon(p.servicio, 24)}</div>
       <div>
         <div style="font-size:18px;font-weight:600">${escapeHtml(p.nombre)}</div>
         <div style="font-size:13px;color:var(--text-muted);margin-top:2px">${escapeHtml(p.prof)} · <span class="badge badge-${servicioColor(p.servicio)}">${escapeHtml(p.servicio)}</span></div>
