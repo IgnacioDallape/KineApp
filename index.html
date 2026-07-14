@@ -26,29 +26,29 @@
   </div>
   <nav class="nav">
     <div class="nav-item active" onclick="navigate('dashboard')">
-      <span class="icon">&#128202;</span><span>Dashboard</span>
+      <span class="icon" data-icon="dashboard"></span><span>Dashboard</span>
     </div>
     <div class="nav-item" onclick="navigate('agenda')">
-      <span class="icon">&#128197;</span><span>Agenda</span>
+      <span class="icon" data-icon="agenda"></span><span>Agenda</span>
     </div>
     <div class="nav-item" onclick="navigate('pacientes')">
-      <span class="icon">&#128100;</span><span>Pacientes</span>
+      <span class="icon" data-icon="pacientes"></span><span>Pacientes</span>
     </div>
     <div class="nav-item" onclick="navigate('asistencia')">
-      <span class="icon">&#9989;</span><span>Asistencia</span>
+      <span class="icon" data-icon="asistencia"></span><span>Asistencia</span>
     </div>
     <div class="nav-item" onclick="navigate('recordatorios')">
-      <span class="icon">&#128276;</span><span>Recordatorios</span>
+      <span class="icon" data-icon="recordatorios"></span><span>Recordatorios</span>
     </div>
     <div class="nav-item" onclick="navigate('servicios')">
-      <span class="icon">&#9881;&#65039;</span><span>Servicios</span>
+      <span class="icon" data-icon="servicios"></span><span>Servicios</span>
     </div>
     <div class="nav-section" id="nav-admin-section">Administración</div>
     <div class="nav-item" id="nav-pagos" onclick="navigate('pagos')">
-      <span class="icon">&#128184;</span><span>Gastos</span>
+      <span class="icon" data-icon="gastos"></span><span>Gastos</span>
     </div>
     <div class="nav-item" id="nav-cobranzas" onclick="navigate('cobranzas')">
-      <span class="icon">&#128176;</span><span>Cobranzas</span>
+      <span class="icon" data-icon="cobranzas"></span><span>Cobranzas</span>
     </div>
   </nav>
   <div class="sidebar-footer">
@@ -393,22 +393,22 @@
 <nav class="bottom-nav">
   <div class="bottom-nav-inner">
     <div class="bnav-item active" id="bnav-dashboard" onclick="navigate('dashboard')">
-      <span class="bicon">&#128202;</span>Inicio
+      <span class="bicon" data-icon="dashboard"></span>Inicio
     </div>
     <div class="bnav-item" id="bnav-agenda" onclick="navigate('agenda')">
-      <span class="bicon">&#128197;</span>Agenda
+      <span class="bicon" data-icon="agenda"></span>Agenda
     </div>
     <div class="bnav-item" id="bnav-pacientes" onclick="navigate('pacientes')">
-      <span class="bicon">&#128100;</span>Pacientes
+      <span class="bicon" data-icon="pacientes"></span>Pacientes
     </div>
     <div class="bnav-item" id="bnav-asistencia" onclick="navigate('asistencia')">
-      <span class="bicon">&#9989;</span>Asist.
+      <span class="bicon" data-icon="asistencia"></span>Asist.
     </div>
     <div class="bnav-item" id="bnav-pagos" onclick="navigate('pagos')">
-      <span class="bicon">&#128184;</span>Gastos
+      <span class="bicon" data-icon="gastos"></span>Gastos
     </div>
     <div class="bnav-item" id="bnav-mas" onclick="toggleMasMenu()">
-      <span class="bicon">⋯</span>Más
+      <span class="bicon" data-icon="mas"></span>Más
     </div>
   </div>
 </nav>
@@ -416,11 +416,11 @@
 <!-- MAS MENU (mobile) -->
 <div id="mas-menu" style="display:none;position:fixed;bottom:70px;right:12px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:300;overflow:hidden;min-width:210px">
   <div id="mas-user" style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg)"></div>
-  <div id="mas-cobranzas" onclick="navigate('cobranzas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128176; Cobranzas</div>
-  <div onclick="navigate('recordatorios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#128276; Recordatorios</div>
-  <div onclick="navigate('servicios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)">&#9881;&#65039; Servicios</div>
-  <div class="btn-actualizar" onclick="actualizarApp()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;color:var(--primary);border-bottom:1px solid var(--border)">&#128260; Actualizar app</div>
-  <div onclick="doLogout()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:600;color:var(--red)">&#128682; Cerrar sesión</div>
+  <div id="mas-cobranzas" onclick="navigate('cobranzas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="cobranzas"></span> Cobranzas</div>
+  <div onclick="navigate('recordatorios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="recordatorios"></span> Recordatorios</div>
+  <div onclick="navigate('servicios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="servicios"></span> Servicios</div>
+  <div class="btn-actualizar" onclick="actualizarApp()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;color:var(--primary);border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="actualizar"></span> Actualizar app</div>
+  <div onclick="doLogout()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:600;color:var(--red)"><span class="mas-ico" data-icon="logout"></span> Cerrar sesión</div>
 </div>
 
 <!-- MODALES -->
@@ -994,6 +994,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="assets/js/config.js"></script>
 <script src="assets/js/store.js"></script>
+<script src="assets/js/icons.js"></script>
 <script src="assets/js/pdf.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
