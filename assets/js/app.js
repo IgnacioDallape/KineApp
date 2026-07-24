@@ -1849,11 +1849,19 @@ function limpiarFotoMedico() {
 }
 
 // Abrir el formulario en modo ALTA (paciente nuevo).
+// Deja el formulario de paciente compacto: solo la 1ra sección desplegada
+// (o la última —rutina— si openRutina). El resto quedan colapsadas.
+function resetPacAccordions(openRutina) {
+  const accs = document.querySelectorAll('#modal-paciente details.acc');
+  accs.forEach((a, i) => { a.open = i === 0; });
+  if (openRutina && accs.length) { accs.forEach(a => { a.open = false; }); accs[accs.length - 1].open = true; }
+}
 function nuevoPaciente() {
   editingPacienteId = null;
   pacienteReturnToTurno = false;
   openModal('modal-paciente');           // popula selects de obras sociales
   resetPacienteForm();
+  resetPacAccordions(false);
   document.getElementById('modal-paciente-title').textContent = 'Nuevo paciente';
   document.getElementById('btn-guardar-paciente').textContent = 'Guardar paciente';
 }
@@ -1874,6 +1882,7 @@ function editarPaciente(id) {
   closeModal('modal-ficha');
   openModal('modal-paciente');           // popula selects ANTES de cargar valores
   fillPacienteForm(p);
+  resetPacAccordions(false);
   document.getElementById('modal-paciente-title').textContent = 'Editar paciente';
   document.getElementById('btn-guardar-paciente').textContent = 'Guardar cambios';
 }
@@ -1884,9 +1893,9 @@ function editarRutina(id) {
   setTimeout(() => {
     const el = document.getElementById('pac-rutina-builder');
     if (!el) return;
+    resetPacAccordions(true);                 // abre la sección de rutina, colapsa el resto
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // resaltado breve para ubicar la sección
-    const prev = el.style.boxShadow;
+    const prev = el.style.boxShadow;          // resaltado breve para ubicar la sección
     el.style.transition = 'box-shadow .25s';
     el.style.boxShadow = '0 0 0 3px var(--primary-soft)';
     setTimeout(() => { el.style.boxShadow = prev || ''; }, 1300);

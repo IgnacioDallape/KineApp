@@ -501,7 +501,9 @@
       <button class="modal-close" onclick="closeModal('modal-paciente')">✕</button>
     </div>
     <!-- 1 · DATOS (los carga la secretaría) -->
-    <div class="form-section-title">1 · Datos del paciente</div>
+    <details class="acc" open>
+    <summary class="acc-head"><span>1 · Datos del paciente</span><span class="acc-caret">▾</span></summary>
+    <div class="acc-body">
     <div class="grid-2">
       <div class="form-group"><label>Nombre completo</label><input class="form-control" id="pac-nombre" placeholder="Juan Pérez"></div>
       <div class="form-group"><label>DNI</label><input class="form-control" id="pac-dni" placeholder="Ej: 30123456" inputmode="numeric"></div>
@@ -523,9 +525,13 @@
       </div>
     </div>
     <div class="form-group"><label>Motivo de consulta</label><input class="form-control" id="pac-motivo" placeholder="¿Por qué consulta?"></div>
+    </div>
+    </details>
 
     <!-- 2 · COBERTURA Y PAGO -->
-    <div class="form-section-title">2 · Cobertura y pago</div>
+    <details class="acc">
+    <summary class="acc-head"><span>2 · Cobertura y pago</span><span class="acc-caret">▾</span></summary>
+    <div class="acc-body">
     <div class="form-group">
       <label>Tipo de cobertura</label>
       <select class="form-control" id="pac-cobertura" onchange="onCoberturaChange()">
@@ -571,9 +577,13 @@
         <button onclick="limpiarFotoMedico()" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;margin-top:2px">✕ Quitar</button>
       </div>
     </div>
+    </div>
+    </details>
 
     <!-- 3 · FICHA CLÍNICA -->
-    <div class="form-section-title">3 · Ficha clínica y evaluación</div>
+    <details class="acc">
+    <summary class="acc-head"><span>3 · Ficha clínica y evaluación</span><span class="acc-caret">▾</span></summary>
+    <div class="acc-body">
     <div class="form-group"><label>Lesión / Diagnóstico</label><input class="form-control" id="pac-lesion" placeholder="Esguince, lumbalgia..."></div>
     <div class="form-group"><label>Antecedentes relevantes</label><textarea class="form-control" id="pac-antecedentes" rows="3" placeholder="Cirugías, recaídas, antecedentes clínicos..."></textarea></div>
     <div class="form-group"><label>Evaluación inicial</label><textarea class="form-control" id="pac-evaluacion" rows="3" placeholder="Dolor, movilidad, fuerza, pruebas funcionales..."></textarea></div>
@@ -588,9 +598,13 @@
     <div class="form-group"><label>Plan de rehabilitación</label><textarea class="form-control" id="pac-plan" rows="3" placeholder="Frecuencia, ejercicios, objetivos de corto plazo..."></textarea></div>
     <div class="form-group"><label>Progresión prevista / actual</label><textarea class="form-control" id="pac-progresion" rows="3" placeholder="Criterios de avance, respuesta al tratamiento, hitos alcanzados..."></textarea></div>
     <div class="form-group"><label>Observaciones</label><textarea class="form-control" id="pac-observaciones" rows="3" placeholder="Indicaciones para el paciente, alertas, seguimiento..."></textarea></div>
+    </div>
+    </details>
 
     <!-- 4 · EVALUACIÓN FÍSICA / KINESIOLÓGICA (la completa el kinesiólogo) -->
-    <div class="form-section-title">4 · Evaluación física y kinesiológica</div>
+    <details class="acc">
+    <summary class="acc-head"><span>4 · Evaluación física y kinesiológica</span><span class="acc-caret">▾</span></summary>
+    <div class="acc-body">
     <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Intensidad del dolor (0 a 10)</label>
     <div class="grid-3 grid-eval">
       <div class="form-group"><label>Reposo <span class="unit">/10</span></label><input type="number" class="form-control" id="pac-dolor-reposo" min="0" max="10" placeholder="0"></div>
@@ -619,10 +633,18 @@
       <label class="chk-item"><input type="checkbox" id="pac-ok-compensaciones"> Compensaciones durante el movimiento</label>
     </div>
     <div class="form-group" style="margin-top:12px"><label>Observaciones (kinesiológica)</label><textarea class="form-control" id="pac-ok-obs" rows="2" placeholder="Hallazgos del examen kinesiológico..."></textarea></div>
+    </div>
+    </details>
 
-    <div class="form-section-title">5 · Rutina de ejercicios <span style="color:var(--text-muted);font-weight:400;font-size:12px">(por semanas y días · se envía por WhatsApp)</span></div>
+    <!-- 5 · RUTINA -->
+    <details class="acc">
+    <summary class="acc-head"><span>5 · Rutina de ejercicios</span><span class="acc-caret">▾</span></summary>
+    <div class="acc-body">
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Por semanas y días · se puede enviar por WhatsApp.</div>
     <div id="pac-rutina-builder"></div>
     <button type="button" class="btn btn-sm btn-secondary" onclick="agregarSemanaRutina()" style="margin-top:2px">+ Agregar semana</button>
+    </div>
+    </details>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-paciente')">Cancelar</button>
       <button class="btn btn-primary" id="btn-guardar-paciente" onclick="guardarPaciente()">Guardar paciente</button>
