@@ -512,6 +512,7 @@ function mostrarTurno(id) {
     </div>
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
       <button class="btn btn-sm btn-success" onclick="marcarTurnoAsist('${t.id}','asistio')">✅ Asistió</button>
+      <button class="btn btn-sm" style="background:var(--teal-light);color:var(--teal)" onclick="marcarAsistYCoseguro('${t.id}')">✅ Asistió + coseguro</button>
       <button class="btn btn-sm btn-danger" onclick="marcarTurnoAsist('${t.id}','ausente')">❌ Ausente</button>
       <button class="btn btn-sm btn-secondary" onclick="marcarTurnoAsist('${t.id}','reprog')">🔄 Reprogramar</button>
       <button class="btn btn-sm btn-primary" onclick="editarTurno('${t.id}')">✏️ Editar</button>
@@ -584,6 +585,18 @@ async function marcarCoseguroTurno(id) {
   } else if (store._persistLocal) {
     store._persistLocal();
   }
+}
+
+// "Asistió + coseguro": marca la asistencia (suma la sesión) y registra el coseguro pagado, en un toque.
+async function marcarAsistYCoseguro(id) {
+  const t = state.turnos.find(x => x.id === id);
+  if (!t) return;
+  if (t.asistencia !== 'asistio') await setAsistenciaTurno(id, 'asistio');  // asegura "asistió" (no togglea)
+  if (!t.coseguroPagado) await marcarCoseguroTurno(id);                     // marca el coseguro (avisa si falta la migración)
+  else mostrarTurno(id);
+  if (state.currentPage === 'agenda') renderAgenda();
+  if (state.currentPage === 'dashboard') renderDashboard();
+  if (state.currentPage === 'pacientes') renderPacientes();
 }
 async function eliminarTurno(id) {
   if (!confirm('¿Eliminar este turno?')) return;
