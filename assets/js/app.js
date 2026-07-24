@@ -499,6 +499,13 @@ function mostrarTurno(id) {
       ${cardKV('Servicio', t.servicio)}
       ${cardKV('Asistencia', asistLabel)}
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:2px">Coseguro</div>
+        <div style="font-size:14px;font-weight:600;color:${t.coseguroPagado ? 'var(--green)' : 'var(--text-muted)'}">${t.coseguroPagado ? 'Abonado' : 'Pendiente'}</div>
+      </div>
+      <button class="btn btn-sm ${t.coseguroPagado ? 'btn-secondary' : 'btn-success'}" onclick="marcarCoseguroTurno('${t.id}')">${t.coseguroPagado ? 'Marcar pendiente' : 'Marcar abonado'}</button>
+    </div>
     <div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:4px">
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:3px">📝 Observaciones / detalle</div>
       <div style="font-size:14px;${t.notas ? '' : 'color:var(--text-muted)'}">${t.notas ? escapeHtml(t.notas) : 'Sin observaciones cargadas'}</div>
@@ -551,6 +558,32 @@ async function marcarTurnoAsist(id, estado) {
   mostrarTurno(id);   // refresca el detalle -> feedback inmediato del cambio
   if (state.currentPage === 'agenda') renderAgenda();
   if (state.currentPage === 'dashboard') renderDashboard();
+}
+
+// Marca si el paciente abonó el coseguro de ESTE turno (toggle). Se cuenta como las sesiones.
+async function marcarCoseguroTurno(id) {
+  const t = state.turnos.find(x => x.id === id);
+  if (!t) return;
+  const next = !t.coseguroPagado;
+  t.coseguroPagado = next;                       // optimista en el cache
+  mostrarTurno(id);                              // feedback inmediato
+  if (state.currentPage === 'agenda') renderAgenda();
+  if (state.currentPage === 'pacientes') renderPacientes();
+  if (store.isCloud && store._sb) {
+    const { error } = await store._sb.from('turnos').update({ coseguro_pagado: next }).eq('id', id);
+    if (error) {
+      t.coseguroPagado = !next;                  // revertir si falló
+      mostrarTurno(id);
+      const msg = `${error.message || ''} ${error.code || ''}`;
+      if (/coseguro_pagado|column|schema cache|PGRST204|42703/i.test(msg)) {
+        alert('Para usar el coseguro falta activar esta función en la base (una sola vez).\n\nEn Supabase → SQL Editor, pegá y ejecutá:\n\nalter table turnos add column if not exists coseguro_pagado boolean default false;\n\n(No borra ni cambia ningún dato.)');
+      } else {
+        alert('No se pudo guardar el coseguro. Revisá la conexión e intentá de nuevo.');
+      }
+    }
+  } else if (store._persistLocal) {
+    store._persistLocal();
+  }
 }
 async function eliminarTurno(id) {
   if (!confirm('¿Eliminar este turno?')) return;
@@ -2412,6 +2445,7 @@ function verPaciente(id) {
   if (!p) return;
   const turnPac = store.turnosDePaciente(p.id);
   const asistidos = turnPac.filter(t => t.asistencia === 'asistio').length;
+  const coseguroPag = turnPac.filter(t => t.coseguroPagado).length;
   const restantes = p.sesionesAuth != null ? Math.max(p.sesionesAuth - p.sesiones, 0) : null;
   const obraSocial = p.tipoCobertura === 'obra_social' && p.obraSocialId
     ? state.obrasSociales.find(x => x.id === p.obraSocialId) : null;
@@ -2506,6 +2540,7 @@ function verPaciente(id) {
           <span style="display:inline-flex">${servicioIcon(t.servicio, 16)}</span>
           <div style="flex:1"><div style="font-size:13px;font-weight:500">${t.fecha} · ${t.hora}</div>
             <div style="font-size:12px;color:var(--text-muted)">${escapeHtml(t.prof)} · ${t.duracion}min</div></div>
+          ${t.coseguroPagado ? '<span class="badge badge-teal" style="font-size:10px" title="Coseguro abonado">Coseguro ✓</span>' : ''}
           ${asistBadge(t.asistencia)}
         </div>`).join('');
 
@@ -2536,6 +2571,7 @@ function verPaciente(id) {
         return `<div style="flex:1;min-width:70px;text-align:center;background:${bg};border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:${color}">${restantes}</div><div style="font-size:12px;color:var(--text-muted)">restantes de ${p.sesionesAuth}</div></div>`;
       })() : ''}
       <div style="flex:1;min-width:70px;text-align:center;background:var(--green-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--green)">${asistidos}</div><div style="font-size:12px;color:var(--text-muted)">asistencias</div></div>
+      <div style="flex:1;min-width:70px;text-align:center;background:var(--teal-light);border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:var(--teal)">${coseguroPag}</div><div style="font-size:12px;color:var(--text-muted)">coseguros pag.</div></div>
       <div style="flex:1;min-width:70px;text-align:center;background:${p.deuda > 0 ? 'var(--red-light)' : 'var(--green-light)'};border-radius:var(--radius-sm);padding:12px"><div style="font-size:26px;font-weight:700;color:${p.deuda > 0 ? 'var(--red)' : 'var(--green)'}">${ars(p.deuda)}</div><div style="font-size:12px;color:var(--text-muted)">deuda</div></div>
     </div>
     ${acc('Ficha clínica individual', fichaBody, true)}
