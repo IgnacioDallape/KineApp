@@ -620,6 +620,16 @@ let editingPacienteId = null;       // null = alta; id = edición de ese pacient
 let pacienteReturnToTurno = false;  // true = el alta vino desde "Nuevo turno"
 
 let pacProfFiltro = '';
+let pacCobFiltro = '';   // '' = todas · 'obra_social' · 'particular'
+
+// Chip de cobertura: nombre de la obra social (azul) o "Particular" (gris).
+function coberturaChip(p) {
+  if (p.tipoCobertura === 'obra_social') {
+    const o = p.obraSocialId ? store.state.obrasSociales.find(x => x.id === p.obraSocialId) : null;
+    return `<span class="badge badge-blue" style="font-size:11px">${o ? escapeHtml(o.nombre) : 'Obra social'}</span>`;
+  }
+  return '<span class="badge badge-gray" style="font-size:11px">Particular</span>';
+}
 
 function pacientesFiltrados() {
   const f = pacFiltro.toLowerCase();
@@ -629,7 +639,9 @@ function pacientesFiltrados() {
       || (p.dni || '').toLowerCase().includes(f);
     const matchServ = !pacServFiltro || p.servicio === pacServFiltro;
     const matchProf = !pacProfFiltro || p.prof === pacProfFiltro;
-    return matchTexto && matchServ && matchProf;
+    const esOS = p.tipoCobertura === 'obra_social';
+    const matchCob = !pacCobFiltro || (pacCobFiltro === 'obra_social' ? esOS : !esOS);
+    return matchTexto && matchServ && matchProf && matchCob;
   });
 }
 
@@ -642,6 +654,8 @@ function renderPacientes() {
     profSel.innerHTML = '<option value="">Todos los profesionales</option>' + profs.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
     profSel.value = pacProfFiltro;
   }
+  const cobSel = document.getElementById('pac-filtro-cob');
+  if (cobSel) cobSel.value = pacCobFiltro;
 
   const all = pacientesFiltrados();
   const total = all.length;
@@ -666,7 +680,7 @@ function renderPacientes() {
     const s = sesCell(p);
     return `
     <tr>
-      <td><strong>${escapeHtml(p.nombre)}</strong></td>
+      <td><strong>${escapeHtml(p.nombre)}</strong><div style="margin-top:3px">${coberturaChip(p)}</div></td>
       <td>${escapeHtml(p.tel)}</td>
       <td><span class="badge badge-${servicioColor(p.servicio)}">${escapeHtml(p.servicio)}</span></td>
       <td>${escapeHtml(p.lesion)}</td>
@@ -748,6 +762,7 @@ function filtrarPacientes(v) {
 }
 function filtrarPorServicio(v) { pacServFiltro = v; pacPage = 0; renderPacientes(); }
 function filtrarPorProf(v) { pacProfFiltro = v; pacPage = 0; renderPacientes(); }
+function filtrarPorCobertura(v) { pacCobFiltro = v; pacPage = 0; renderPacientes(); }
 
 function confirmarBorrarPaciente(id) {
   const p = state.pacientes.find(x => x.id === id);
