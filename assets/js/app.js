@@ -261,6 +261,57 @@ function ars(n) { return '$' + (n || 0).toLocaleString('es-AR'); }
 function ymd(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+
+// ===== FERIADOS NACIONALES (Argentina) =====
+// Domingo de Pascua (algoritmo de Butcher) para calcular Carnaval y Viernes Santo.
+function _domingoPascua(year) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, mes - 1, dia);
+}
+let _feriadosCache = {};
+// Devuelve { 'YYYY-MM-DD': 'Nombre del feriado' } para el año dado.
+function feriadosAR(year) {
+  if (_feriadosCache[year]) return _feriadosCache[year];
+  const f = {};
+  const addDays = (base, n) => { const x = new Date(base); x.setDate(x.getDate() + n); return x; };
+  const set = (mes, dia, nombre) => { f[ymd(new Date(year, mes - 1, dia))] = nombre; };
+  const setD = (dateObj, nombre) => { f[ymd(dateObj)] = nombre; };
+
+  // Inamovibles (fecha fija)
+  set(1, 1, 'Año Nuevo'); set(3, 24, 'Día de la Memoria'); set(4, 2, 'Malvinas');
+  set(5, 1, 'Día del Trabajador'); set(5, 25, 'Revolución de Mayo');
+  set(7, 9, 'Día de la Independencia'); set(12, 8, 'Inmaculada Concepción'); set(12, 25, 'Navidad');
+
+  // Basados en Pascua
+  const pascua = _domingoPascua(year);
+  setD(addDays(pascua, -2), 'Viernes Santo');
+  setD(addDays(pascua, -48), 'Carnaval'); setD(addDays(pascua, -47), 'Carnaval');
+
+  // Trasladables: martes/miércoles -> lunes anterior; jueves/viernes -> lunes siguiente.
+  const trasl = (mes, dia, nombre) => {
+    let dt = new Date(year, mes - 1, dia); const dow = dt.getDay();
+    if (dow === 2 || dow === 3) dt = addDays(dt, -(dow - 1));
+    else if (dow === 4 || dow === 5) dt = addDays(dt, 8 - dow);
+    setD(dt, nombre);
+  };
+  trasl(6, 20, 'Paso a la Inmortalidad de Belgrano');
+  trasl(8, 17, 'Paso a la Inmortalidad de San Martín');
+  trasl(10, 12, 'Diversidad Cultural');
+  trasl(11, 20, 'Soberanía Nacional');
+
+  _feriadosCache[year] = f;
+  return f;
+}
+// Nombre del feriado si esa fecha es feriado nacional, o null.
+function esFeriado(dateObj) {
+  return feriadosAR(dateObj.getFullYear())[ymd(dateObj)] || null;
+}
 // Normaliza un teléfono argentino a formato internacional para wa.me (prefijo 549).
 function telWhatsApp(tel) {
   let n = (tel || '').replace(/\D/g, '');
@@ -424,11 +475,18 @@ function renderAgenda() {
       (!filtroActividad || t.servicio === filtroActividad) &&
       (!filtroProf || t.prof === filtroProf))
       .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));   // ordenados por hora
-    return slotTurnos.map(t => `
-      <div class="turno ${t.servClass}" onclick="event.stopPropagation();mostrarTurno('${t.id}')" title="${escapeHtml(t.paciente)} · ${t.hora}">
+    return slotTurnos.map(t => {
+      const pac = t.pacienteId ? store.pacienteById(t.pacienteId) : null;
+      const lesion = (pac && pac.lesion) ? pac.lesion : '';
+      return `
+      <div class="turno ${t.servClass}" onclick="event.stopPropagation();mostrarTurno('${t.id}')" title="${escapeHtml(t.paciente)} · ${t.hora}${lesion ? ' · ' + escapeHtml(lesion) : ''}">
         <span class="turno-hora">${t.hora}</span>
-        <span class="turno-nombre">${escapeHtml(t.paciente)}</span>
-      </div>`).join('');
+        <div class="turno-info">
+          <span class="turno-nombre">${escapeHtml(t.paciente)}</span>
+          ${lesion ? `<span class="turno-lesion">${escapeHtml(lesion)}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
   };
 
   if (isMobile()) {
@@ -439,8 +497,9 @@ function renderAgenda() {
     const fechaStr = ymd(dia);
     const esHoy = dia.toDateString() === hoy.toDateString();
     const slot = slotHtmlFor(fechaStr);
+    const ferDia = esFeriado(dia);
     let html = '<div class="cell agenda-header"></div>';
-    html += `<div class="cell agenda-header" style="${esHoy ? 'background:var(--primary-light);color:var(--primary);font-weight:700' : ''}">${diaNom[dia.getDay()]} ${dia.getDate()}</div>`;
+    html += `<div class="cell agenda-header" style="${esHoy ? 'background:var(--primary-light);color:var(--primary);font-weight:700' : (ferDia ? 'background:var(--red-light);color:var(--red);font-weight:600' : '')}" ${ferDia ? `title="Feriado nacional: ${escapeHtml(ferDia)}"` : ''}>${diaNom[dia.getDay()]} ${dia.getDate()}${ferDia ? `<div style="font-size:11px;font-weight:600;line-height:1.15;margin-top:1px">Feriado · ${escapeHtml(ferDia)}</div>` : ''}</div>`;
     horas.forEach(hora => {
       html += `<div class="cell agenda-time">${hora}</div>`;
       html += `<div class="cell agenda-slot" onclick="abrirNuevoTurno('${fechaStr}','${hora}')">${slot(hora)}
@@ -460,7 +519,10 @@ function renderAgenda() {
   let html = '<div class="cell agenda-header"></div>';
   dias.forEach((d, i) => {
     const esHoy = d.toDateString() === hoy.toDateString();
-    html += `<div class="cell agenda-header" style="${esHoy ? 'background:var(--primary-light);color:var(--primary);font-weight:700' : ''}">${diaNom[i]} ${d.getDate()}</div>`;
+    const fer = esFeriado(d);
+    const style = esHoy ? 'background:var(--primary-light);color:var(--primary);font-weight:700'
+                : fer ? 'background:var(--red-light);color:var(--red);font-weight:600' : '';
+    html += `<div class="cell agenda-header" style="${style}" ${fer ? `title="Feriado nacional: ${escapeHtml(fer)}"` : ''}>${diaNom[i]} ${d.getDate()}${fer ? '<div style="font-size:9px;font-weight:600;line-height:1;margin-top:1px">Feriado</div>' : ''}</div>`;
   });
   horas.forEach(hora => {
     html += `<div class="cell agenda-time">${hora}</div>`;
@@ -485,6 +547,8 @@ function mostrarTurno(id) {
   const asistLabel = t.asistencia === 'asistio' ? '✅ Asistió'
     : t.asistencia === 'ausente' ? '❌ Ausente'
     : t.asistencia === 'reprog' ? '🔄 Reprogramado' : '— Pendiente';
+  const pacT = pacienteDeTurno(t);
+  const lesionT = (pacT && (pacT.lesion || '').trim()) ? pacT.lesion : '—';
   document.getElementById('turno-detalle-content').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <div style="width:44px;height:44px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">${servicioIcon(t.servicio, 24)}</div>
@@ -498,6 +562,10 @@ function mostrarTurno(id) {
       ${cardKV('Duración', `${t.duracion} min`)}
       ${cardKV('Servicio', t.servicio)}
       ${cardKV('Asistencia', asistLabel)}
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:3px">Lesión / Diagnóstico</div>
+      <div style="font-size:14px;font-weight:500;${lesionT === '—' ? 'color:var(--text-muted)' : ''}">${escapeHtml(lesionT)}</div>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;flex-wrap:wrap">
       <div>
