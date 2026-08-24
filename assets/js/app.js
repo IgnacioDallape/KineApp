@@ -1611,6 +1611,22 @@ function populatePacienteSelects() {
   populateServicioSelects();
 }
 
+// Buscador del selector de paciente en el modal de turno: oculta las opciones que
+// no coinciden (anda también en el picker nativo de iPhone). Si queda una sola, la elige.
+function filtrarTurnoPaciente(q) {
+  const sel = document.getElementById('turno-paciente');
+  if (!sel) return;
+  const term = (q || '').trim().toLowerCase();
+  let visibles = 0, primer = null;
+  Array.from(sel.options).forEach(opt => {
+    if (!opt.value) { opt.hidden = false; return; }   // "— Seleccionar —" siempre visible
+    const match = !term || opt.textContent.toLowerCase().includes(term);
+    opt.hidden = !match;
+    if (match) { visibles++; if (!primer) primer = opt; }
+  });
+  if (term && visibles === 1 && primer) sel.value = primer.value;
+}
+
 // ===== PROFESIONALES =====
 // SÓLO los profesionales cargados por el centro (en Supabase). Sin nombres de ejemplo.
 function profesionalesEfectivos() {
@@ -1770,6 +1786,8 @@ function openModal(id) {
   document.getElementById(id).classList.add('open');
   if (id === 'modal-turno') {
     resetTurnoForm();
+    const pacSearch = document.getElementById('turno-pac-search');
+    if (pacSearch) { pacSearch.value = ''; filtrarTurnoPaciente(''); }   // limpia el buscador y muestra todos
     const sel = document.getElementById('turno-hora');
     if (!sel.children.length) {
       for (let h = 8; h <= 22; h++) ['00', '15', '30', '45'].forEach(m => {
