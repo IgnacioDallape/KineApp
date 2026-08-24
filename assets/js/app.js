@@ -261,6 +261,12 @@ function ars(n) { return '$' + (n || 0).toLocaleString('es-AR'); }
 function ymd(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+// 'YYYY-MM-DD' -> 'DD/MM/AAAA' (o '—' si está vacía).
+function fmtFechaCorta(s) {
+  if (!s) return '—';
+  const d = new Date(s + 'T12:00');
+  return isNaN(d.getTime()) ? s : d.toLocaleDateString('es-AR');
+}
 
 // ===== FERIADOS NACIONALES (Argentina) =====
 // Domingo de Pascua (algoritmo de Butcher) para calcular Carnaval y Viernes Santo.
@@ -2002,11 +2008,13 @@ function leerEvalClinica() {
     inflamacion: v('pac-inflamacion'), hematoma: v('pac-hematoma'), inestabilidad: v('pac-inestabilidad'),
     rangoMovilidad: v('pac-rango-movilidad'), mecanismo: v('pac-mecanismo'), antecDeportivos: v('pac-antec-deportivos'),
     obs, obsTexto: v('pac-ok-obs'), rutinaPlan: leerRutinaPlan(),
+    fechaLesion: v('pac-fecha-lesion'),
   };
 }
 function fillEvalClinica(e) {
   e = e || {};
   const set = (id, val) => { const x = document.getElementById(id); if (x) x.value = (val ?? '') === null ? '' : (val ?? ''); };
+  set('pac-fecha-lesion', e.fechaLesion);
   set('pac-dolor-reposo', e.dolorReposo); set('pac-dolor-mov', e.dolorMovimiento); set('pac-dolor-dep', e.dolorDeporte);
   set('pac-inflamacion', e.inflamacion); set('pac-hematoma', e.hematoma); set('pac-inestabilidad', e.inestabilidad);
   set('pac-rango-movilidad', e.rangoMovilidad); set('pac-mecanismo', e.mecanismo); set('pac-antec-deportivos', e.antecDeportivos);
@@ -2129,6 +2137,7 @@ function imprimirFicha(id) {
         ${row('Deporte / actividad', p.deporte)}${row('Cobertura', obraSocial ? obraSocial.nombre : 'Particular')}
       </div>
       ${row('Motivo de consulta', p.motivo)}${row('Lesión / diagnóstico', p.lesion)}
+      ${row('Fecha de lesión', fmtFechaCorta(e.fechaLesion))}
 
       <div class="fp-h2">Evaluación física</div>
       <div class="fp-grid">
@@ -2566,7 +2575,7 @@ function verPaciente(id) {
   const fichaBody = `<div class="detail-grid">
       ${kv('DNI', p.dni || '—')}${kv('Teléfono', p.tel || '—')}${kv('Email', p.email || '—')}
       ${kv('Edad', p.edad || '—')}${kv('Deporte / Actividad', p.deporte || '—')}${kv('Lesión / Diagnóstico', p.lesion || '—')}
-      ${kv('Motivo de consulta', p.motivo || '—')}
+      ${kv('Fecha de lesión', fmtFechaCorta(p.evalClinica && p.evalClinica.fechaLesion))}${kv('Motivo de consulta', p.motivo || '—')}
     </div>`;
 
   const coberturaBody = `<div class="detail-grid">
