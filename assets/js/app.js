@@ -1596,13 +1596,8 @@ function populateServicioSelects() {
 }
 
 function populatePacienteSelects() {
-  const turnoSel = document.getElementById('turno-paciente');
-  if (turnoSel) {
-    turnoSel.innerHTML = '<option value="">— Seleccionar —</option>' + state.pacientes.map(p => {
-      const agotado = p.sesionesAuth != null && store.turnosDePaciente(p.id).length >= p.sesionesAuth;
-      return `<option value="${p.id}">${escapeHtml(p.nombre)}${agotado ? ' 🚫 sin sesiones' : ''}</option>`;
-    }).join('');
-  }
+  // El paciente del turno se elige por el combobox propio (#turno-pac-search),
+  // no por un <select>. Ver filtrarTurnoPaciente / elegirTurnoPaciente.
   const pagoSel = document.getElementById('pago-paciente');
   if (pagoSel) pagoSel.innerHTML = state.pacientes.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('');
   const osSelect = document.getElementById('pac-os-select');
@@ -1611,20 +1606,49 @@ function populatePacienteSelects() {
   populateServicioSelects();
 }
 
-// Buscador del selector de paciente en el modal de turno: oculta las opciones que
-// no coinciden (anda también en el picker nativo de iPhone). Si queda una sola, la elige.
+// Buscador de paciente (combobox propio) del modal de turno. Lista SIEMPRE alfabética,
+// filtra por nombre/DNI, y al tocar uno lo deja en #turno-paciente (input hidden con el id).
+// No usa el <select> nativo, así que no se traba en el picker del iPhone al buscar de nuevo.
+function _pacientesOrdenados() {
+  return state.pacientes.slice().sort((a, b) =>
+    (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
+}
 function filtrarTurnoPaciente(q) {
-  const sel = document.getElementById('turno-paciente');
-  if (!sel) return;
+  const box = document.getElementById('turno-pac-results');
+  if (!box) return;
   const term = (q || '').trim().toLowerCase();
-  let visibles = 0, primer = null;
-  Array.from(sel.options).forEach(opt => {
-    if (!opt.value) { opt.hidden = false; return; }   // "— Seleccionar —" siempre visible
-    const match = !term || opt.textContent.toLowerCase().includes(term);
-    opt.hidden = !match;
-    if (match) { visibles++; if (!primer) primer = opt; }
-  });
-  if (term && visibles === 1 && primer) sel.value = primer.value;
+  let lista = _pacientesOrdenados();
+  if (term) lista = lista.filter(p =>
+    (p.nombre || '').toLowerCase().includes(term) || (p.dni || '').toLowerCase().includes(term));
+  const top = lista.slice(0, 50);
+  if (!top.length) {
+    box.innerHTML = '<div class="combo-empty">Sin resultados</div>';
+  } else {
+    box.innerHTML = top.map(p => {
+      const agotado = p.sesionesAuth != null && store.turnosDePaciente(p.id).length >= p.sesionesAuth;
+      return `<div class="combo-item" onmousedown="event.preventDefault();elegirTurnoPaciente('${p.id}')">
+        <span>${escapeHtml(p.nombre)}${agotado ? ' <span style="color:var(--red);font-size:11px">· sin sesiones</span>' : ''}</span>
+        ${p.lesion ? `<span style="color:var(--text-muted);font-size:11px">${escapeHtml(p.lesion)}</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+  box.style.display = 'block';
+}
+function elegirTurnoPaciente(id) {
+  const p = store.pacienteById(id);
+  const hid = document.getElementById('turno-paciente'); if (hid) hid.value = id;
+  const s = document.getElementById('turno-pac-search'); if (s) s.value = p ? p.nombre : '';
+  ocultarTurnoPacResultados();
+}
+function ocultarTurnoPacResultados() {
+  const box = document.getElementById('turno-pac-results');
+  if (box) box.style.display = 'none';
+}
+// Refleja en el buscador el paciente seteado por código (editar turno / recién creado).
+function reflejarTurnoPaciente(id) {
+  const p = id ? store.pacienteById(id) : null;
+  const s = document.getElementById('turno-pac-search'); if (s) s.value = p ? p.nombre : '';
+  ocultarTurnoPacResultados();
 }
 
 // ===== PROFESIONALES =====
@@ -1787,7 +1811,10 @@ function openModal(id) {
   if (id === 'modal-turno') {
     resetTurnoForm();
     const pacSearch = document.getElementById('turno-pac-search');
-    if (pacSearch) { pacSearch.value = ''; filtrarTurnoPaciente(''); }   // limpia el buscador y muestra todos
+    if (pacSearch) pacSearch.value = '';                              // limpia el buscador
+    const pacHidden = document.getElementById('turno-paciente');
+    if (pacHidden) pacHidden.value = '';                             // sin paciente elegido
+    ocultarTurnoPacResultados();
     const sel = document.getElementById('turno-hora');
     if (!sel.children.length) {
       for (let h = 8; h <= 22; h++) ['00', '15', '30', '45'].forEach(m => {
@@ -1834,6 +1861,7 @@ function editarTurno(id) {
   const set = (idd, v) => { const e = document.getElementById(idd); if (e) e.value = v; };
   const ensureOpt = (sel, val) => { if (val && ![...sel.options].some(o => o.value === val || o.textContent === val)) sel.insertAdjacentHTML('afterbegin', `<option>${escapeHtml(val)}</option>`); };
   set('turno-paciente', t.pacienteId || '');
+  reflejarTurnoPaciente(t.pacienteId || '');   // muestra el nombre en el buscador
   set('turno-fecha', t.fecha);
   const horaSel = document.getElementById('turno-hora');
   if (t.hora && ![...horaSel.options].some(o => o.value === t.hora)) horaSel.insertAdjacentHTML('beforeend', `<option>${escapeHtml(t.hora)}</option>`);
@@ -2309,6 +2337,7 @@ async function guardarPaciente() {
     populatePacienteSelects();
     const sel = document.getElementById('turno-paciente');
     if (sel) sel.value = createdId;   // el modal-turno sigue abierto detrás
+    reflejarTurnoPaciente(createdId); // muestra el nombre del paciente nuevo en el buscador
   } else {
     pacienteReturnToTurno = false;
   }

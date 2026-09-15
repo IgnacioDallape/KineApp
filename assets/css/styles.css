@@ -323,6 +323,20 @@
   .select-pretty:hover { border-color: var(--primary-soft); }
   .select-pretty:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
 
+  /* Combobox (buscador de paciente en el modal de turno) */
+  .combo-results {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 60;
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md); max-height: 240px; overflow-y: auto; margin-top: 4px;
+  }
+  .combo-item {
+    display: flex; flex-direction: column; gap: 1px;
+    padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--border);
+  }
+  .combo-item:last-child { border-bottom: none; }
+  .combo-item:hover { background: var(--bg); }
+  .combo-empty { padding: 10px 12px; color: var(--text-muted); font-size: 13px; }
+
   /* PACIENTE DETAIL */
   .hist-item { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; gap: 12px; }
   .hist-item:last-child { border-bottom: none; }

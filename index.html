@@ -437,11 +437,14 @@
     </div>
     <div class="form-group">
       <label>Paciente</label>
-      <input type="text" class="form-control" id="turno-pac-search" placeholder="Buscar por nombre…" autocomplete="off" oninput="filtrarTurnoPaciente(this.value)" style="margin-bottom:6px">
-      <div style="display:flex;gap:8px">
-        <select class="form-control" id="turno-paciente" style="flex:1">
-          <option>— Seleccionar —</option>
-        </select>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="flex:1;position:relative">
+          <input type="hidden" id="turno-paciente">
+          <input type="text" class="form-control" id="turno-pac-search" placeholder="Buscar paciente por nombre…" autocomplete="off"
+            oninput="filtrarTurnoPaciente(this.value)" onfocus="filtrarTurnoPaciente(this.value)"
+            onblur="setTimeout(ocultarTurnoPacResultados, 180)">
+          <div id="turno-pac-results" class="combo-results" style="display:none"></div>
+        </div>
         <button type="button" class="btn btn-secondary" style="white-space:nowrap" onclick="nuevoPacienteDesdeTurno()">+ Paciente</button>
       </div>
     </div>
