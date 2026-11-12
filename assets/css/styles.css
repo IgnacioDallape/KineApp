@@ -239,6 +239,10 @@
   .turno-lesion { font-size: 9.5px; font-weight: 400; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .turno-ses { margin-left: auto; flex-shrink: 0; font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.28); padding: 1px 6px; border-radius: 10px; font-variant-numeric: tabular-nums; }
   .turno.bloqueado .turno-ses { background: rgba(0,0,0,0.08); }
+  /* Última sesión autorizada: se marca bien visible en la agenda */
+  .turno.turno-ultima { outline: 2px solid #f5b301; outline-offset: -2px; }
+  .turno-ultima-tag { font-size: 9px; font-weight: 800; letter-spacing: 0.03em; color: #ffe08a; }
+  .turno-ses.ultima { background: #f5b301; color: #3a2600; }
   .turno:hover { opacity: 0.85; }
 
   .servicio-card { position: relative; }

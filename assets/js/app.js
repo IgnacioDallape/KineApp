@@ -597,12 +597,14 @@ function renderAgenda() {
       const lesion = (pac && pac.lesion) ? pac.lesion : '';
       const nSes = mapaSes[t.id];
       const total = pac && pac.sesionesAuth != null ? pac.sesionesAuth : null;
-      const sesBadge = nSes ? `<span class="turno-ses" title="Sesión ${nSes}${total ? ' de ' + total : ''}">${nSes}${total ? '/' + total : ''}</span>` : '';
+      const esUltima = total != null && nSes === total && t.asistencia !== 'reprog';  // completa las autorizadas
+      const sesBadge = nSes ? `<span class="turno-ses${esUltima ? ' ultima' : ''}" title="${esUltima ? 'Última sesión autorizada' : 'Sesión ' + nSes + (total ? ' de ' + total : '')}">${nSes}${total ? '/' + total : ''}</span>` : '';
       return `
-      <div class="turno ${t.servClass}" onclick="event.stopPropagation();mostrarTurno('${t.id}')" title="${escapeHtml(t.paciente)} · ${t.hora}${lesion ? ' · ' + escapeHtml(lesion) : ''}">
+      <div class="turno ${t.servClass}${esUltima ? ' turno-ultima' : ''}" onclick="event.stopPropagation();mostrarTurno('${t.id}')" title="${escapeHtml(t.paciente)} · ${t.hora}${esUltima ? ' · ÚLTIMA SESIÓN' : ''}${lesion ? ' · ' + escapeHtml(lesion) : ''}">
         <span class="turno-hora">${t.hora}</span>
         <div class="turno-info">
           <span class="turno-nombre">${escapeHtml(t.paciente)}</span>
+          ${esUltima ? '<span class="turno-ultima-tag">★ ÚLTIMA SESIÓN</span>' : ''}
           ${lesion ? `<span class="turno-lesion">${escapeHtml(lesion)}</span>` : ''}
         </div>
         ${sesBadge}
