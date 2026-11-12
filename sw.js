@@ -3,11 +3,11 @@
 // con fallback a caché para que la app abra offline. Los CDN (Supabase, jsPDF)
 // van directo a la red (no se cachean acá).
 
-const CACHE = 'kineapp-v28';  // ⬆ subir este número en cada cambio fuerza que el PWA se actualice
+const CACHE = 'kineapp-v29';  // ⬆ subir este número en cada cambio fuerza que el PWA se actualice
 const SHELL = [
   './', './index.html',
   './assets/css/styles.css',
-  './assets/js/config.js', './assets/js/store.js', './assets/js/icons.js', './assets/js/pdf.js', './assets/js/app.js',
+  './assets/js/config.js', './assets/js/logic.js', './assets/js/store.js', './assets/js/icons.js', './assets/js/pdf.js', './assets/js/app.js',
   './manifest.webmanifest', './assets/icon.svg',
 ];
 

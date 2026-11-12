@@ -1924,16 +1924,12 @@ function tarifaDePack(concepto, servicio) {
 const PACK_SESIONES = { 'Por sesión': 1, 'Pack 4 sesiones': 4, 'Pack 5 sesiones': 5, 'Pack 6 sesiones': 6, 'Pack 8 sesiones': 8, 'Pack 10 sesiones': 10, 'Pack 12 sesiones': 12, 'Pack 15 sesiones': 15, 'Pack 20 sesiones': 20 };
 // Precio del pack: tarifa directa, o (tarifa por sesión × N) si no cargaron la del pack.
 function precioPack(concepto, servicio) {
-  const directo = tarifaDePack(concepto, servicio);
-  if (directo > 0) return directo;
-  return tarifaDePack('Por sesión', servicio) * (PACK_SESIONES[concepto] || 1);
+  return KineLogic.precioDePack(concepto, tarifaDePack(concepto, servicio), tarifaDePack('Por sesión', servicio));
 }
 // Coseguro de un pack = lo que paga el paciente. Se carga DIRECTO en la ficha de la
 // obra social (os.cubre guarda el coseguro por pack). Fallback: coseguro por sesión × N.
 function coseguroPack(os, concepto) {
-  const c = (os && os.cubre) || {};
-  if (c[concepto] > 0) return c[concepto];
-  return (c['Por sesión'] || 0) * (PACK_SESIONES[concepto] || 1);
+  return KineLogic.coseguroDePack(os && os.cubre, concepto);
 }
 // Packs que tienen precio (tarifa directa o derivada de "por sesión").
 function packsConPrecio(servicio) {
