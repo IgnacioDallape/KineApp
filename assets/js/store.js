@@ -38,6 +38,10 @@
   const ALIASES = { servicios: { desc: 'descripcion' } };
   // 'created_at' SÍ se lee (como createdAt) -> lo usan las estadísticas (nuevos del mes).
   const IGNORE_ON_READ = new Set(['updated_at']);
+  // 'updated_at' NUNCA se escribe desde el cliente: lo maneja la DB (trigger/default).
+  // Además algunas tablas (pagos/tarifas/profesionales) ni tienen esa columna, así que
+  // mandarla rompería el insert. Se usa solo en el cache local (para detectar ediciones).
+  const IGNORE_ON_WRITE = new Set(['updated_at']);
 
   const camelToSnake = s => s.replace(/[A-Z]/g, m => '_' + m.toLowerCase());
   const snakeToCamel = s => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
@@ -47,7 +51,9 @@
     const row = {};
     for (const [k, v] of Object.entries(obj)) {
       if (v === undefined) continue;
-      row[alias[k] || camelToSnake(k)] = v;
+      const col = alias[k] || camelToSnake(k);
+      if (IGNORE_ON_WRITE.has(col)) continue;
+      row[col] = v;
     }
     return row;
   }
@@ -196,7 +202,11 @@
           this.isCloud = false;
           this.mode = 'local';
           this.cloudError = (e && e.message) || 'Error de conexión';
-          this._loadLocal(true);   // true = vino de fallo cloud -> no sembrar demo
+          // Antes de mostrar una pantalla en blanco: si hay copia local de la nube
+          // (snapshot de la última carga buena), la mostramos (SOLO lectura; no escribe
+          // ni borra nada). Si no hay snapshot, caemos a local vacío como antes.
+          if (this._loadFromCloudSnapshot()) this.usingSnapshot = true;
+          else this._loadLocal(true);   // true = vino de fallo cloud -> no sembrar demo
         }
       } else {
         this._loadLocal();
@@ -246,27 +256,62 @@
       } catch (_) { /* ignorar backup corrupto */ }
     },
 
-    // Sube a la nube los datos locales (upsert por id, idempotente). Respeta el orden
-    // de dependencias (FK): primero catálogos y pacientes, después turnos/pagos.
+    // ms de un timestamp (ISO o lo que sea). null si no es válido.
+    _ts(v) { if (!v) return null; const t = new Date(v).getTime(); return isNaN(t) ? null : t; },
+
+    // Trae {id -> updated_at} de las filas que YA están en la nube, en lotes (evita URLs
+    // gigantes). Devuelve null si la tabla no tiene updated_at o falla -> modo seguro.
+    async _fetchCloudStamps(table, ids) {
+      try {
+        const map = new Map();
+        const CH = 150;
+        for (let i = 0; i < ids.length; i += CH) {
+          const chunk = ids.slice(i, i + CH);
+          const { data, error } = await this._sb.from(table).select('id, updated_at').in('id', chunk);
+          if (error) return null;   // p.ej. tabla sin updated_at -> modo seguro (solo agregar)
+          for (const row of (data || [])) map.set(row.id, row.updated_at || null);
+        }
+        return map;
+      } catch (_) { return null; }
+    },
+
+    // Sube a la nube los datos locales. Respeta el orden de dependencias (FK): primero
+    // catálogos y pacientes, después turnos/pagos.
+    //   - Fila que NO existe en la nube -> se agrega.
+    //   - Fila editada sin conexión (tiene updatedAt) y MÁS NUEVA que la nube -> se sube.
+    //   - Fila editada offline pero la nube tiene algo MÁS NUEVO -> NO se pisa (conflicto).
+    //   - Fila sin editar -> no se toca.
+    // Nunca pisa una versión más nueva de la nube (no se pierde ningún cambio ajeno).
     async pushLocalToCloud() {
-      if (!this.isCloud || !this._sb) return { ok: false, subidos: 0, errores: ['No hay conexión a la nube'] };
-      if (!this.localBackup) return { ok: true, subidos: 0, errores: [] };
+      if (!this.isCloud || !this._sb) return { ok: false, subidos: 0, conflictos: 0, errores: ['No hay conexión a la nube'] };
+      if (!this.localBackup) return { ok: true, subidos: 0, conflictos: 0, errores: [] };
       const db = this.localBackup;
       const order = ['obrasSociales', 'servicios', 'tarifas', 'profesionales', 'gastos', 'pacientes', 'turnos', 'pagos'];
-      let subidos = 0; const errores = [];
+      let subidos = 0, conflictos = 0; const errores = [];
       for (const key of order) {
         if (!TABLES[key]) continue;
-        // Si la tabla no existe en la nube (migración pendiente), no intentamos subir:
-        // erroraría y abortaría toda la migración.
+        // Si la tabla no existe en la nube (migración pendiente), no intentamos subir.
         if (this.missingTables && this.missingTables.has(TABLES[key])) continue;
         const rows = (db[key] || []).filter(r => r && r.id);
         if (!rows.length) continue;
-        const payload = rows.map(r => toRow(key, r));
-        // ignoreDuplicates: si un id ya existe en la nube, NO se pisa (cumple "no se borra
-        // ni se pisa lo existente"). Sólo agrega lo que falta.
-        const { error } = await this._sb.from(TABLES[key]).upsert(payload, { onConflict: 'id', ignoreDuplicates: true });
+
+        const cloudStamp = await this._fetchCloudStamps(TABLES[key], rows.map(r => r.id));
+        const addOnly = (cloudStamp === null);   // sin timestamps -> no pisar nunca
+        const toUpsert = [];
+        for (const r of rows) {
+          if (addOnly) { toUpsert.push(r); continue; }        // modo seguro: upsert ignoreDuplicates
+          if (!cloudStamp.has(r.id)) { toUpsert.push(r); continue; }   // nueva -> insertar
+          const localT = this._ts(r.updatedAt);
+          if (localT == null) continue;                        // existe y no se editó local -> no tocar
+          const cloudT = this._ts(cloudStamp.get(r.id));
+          if (cloudT == null || localT > cloudT) toUpsert.push(r);    // edición local más nueva -> subir
+          else conflictos++;                                   // la nube tiene algo más nuevo -> no pisar
+        }
+        if (!toUpsert.length) continue;
+        const { error } = await this._sb.from(TABLES[key])
+          .upsert(toUpsert.map(r => toRow(key, r)), { onConflict: 'id', ignoreDuplicates: addOnly });
         if (error) errores.push(TABLES[key] + ': ' + error.message);
-        else subidos += rows.length;
+        else subidos += toUpsert.length;
       }
       if (!errores.length) {
         // Ya subió todo: limpiamos el backup local para no re-ofrecer. El recargado desde
@@ -275,7 +320,7 @@
         this.localBackup = null; this.localBackupTotal = 0;
         try { await this._loadCloud(); this.reindex(); } catch (_) { /* recarga best-effort */ }
       }
-      return { ok: errores.length === 0, subidos, errores };
+      return { ok: errores.length === 0, subidos, conflictos, errores };
     },
 
     // ---------- copia de seguridad (red contra borrados accidentales) ----------
@@ -296,6 +341,21 @@
         let total = 0; for (const key of Object.keys(TABLES)) total += ((snap.tables || {})[key] || []).length;
         return { savedAt: snap.savedAt, total };
       } catch (_) { return null; }
+    },
+    // Hidrata el cache desde la copia local de la nube (kineapp:cloud-backup) cuando la
+    // nube no responde. SOLO lectura: no escribe en localStorage ni en la nube, no borra
+    // nada. Devuelve true si había una copia con datos. Evita la pantalla en blanco.
+    _loadFromCloudSnapshot() {
+      try {
+        const snap = JSON.parse(localStorage.getItem('kineapp:cloud-backup') || 'null');
+        if (!snap || !snap.tables) return false;
+        let total = 0;
+        for (const key of Object.keys(TABLES)) total += ((snap.tables[key]) || []).length;
+        if (total === 0) return false;
+        for (const key of Object.keys(TABLES)) this.state[key] = (snap.tables[key] || []).slice();
+        this.snapshotAt = snap.savedAt || null;
+        return true;
+      } catch (_) { return false; }
     },
 
     // Devuelve TODOS los datos para descargar como archivo de respaldo.
@@ -394,7 +454,9 @@
 
     async update(key, id, fields) {
       const cur = this.state[key].find(x => x.id === id);
-      if (cur) Object.assign(cur, fields);
+      // updatedAt queda SOLO en el cache (toRow lo descarta al escribir): sirve para saber
+      // qué se editó sin conexión y subirlo sin pisar lo más nuevo de la nube.
+      if (cur) { Object.assign(cur, fields); cur.updatedAt = new Date().toISOString(); }
       this.reindex();
       this.lastWriteError = null;
       if (this.isCloud) {

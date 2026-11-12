@@ -104,6 +104,11 @@ function renderSyncBanner() {
     b.style.display = 'block';
     b.style.background = '#fdecea'; b.style.color = '#a32219';
     b.innerHTML = '⚠️ <strong>Sin conexión con la nube.</strong> Lo que cargues se guarda solo en este equipo y NO se sincroniza con los demás. Revisá tu conexión a internet y volvé a abrir la app. <button class="btn btn-sm" style="margin-left:8px" onclick="location.reload()">Reintentar</button>';
+  } else if (store.usingSnapshot) {
+    b.style.display = 'block';
+    b.style.background = '#fff4e0'; b.style.color = '#8a5300';
+    const cuando = store.snapshotAt ? new Date(store.snapshotAt).toLocaleString('es-AR') : '';
+    b.innerHTML = `⚠️ <strong>Sin conexión con la nube.</strong> Estás viendo la última copia guardada en este equipo${cuando ? ' (' + cuando + ')' : ''}; puede estar desactualizada. Mejor no cargar ni editar hasta reconectar. <button class="btn btn-sm" style="margin-left:8px" onclick="location.reload()">Reintentar</button>`;
   } else if (store.isCloud && store.localBackup && store.localBackupTotal > 0) {
     const n = store.localBackupTotal;
     b.style.display = 'block';
@@ -129,7 +134,11 @@ async function subirDatosLocales() {
     return;
   }
   if (r.ok) {
-    alert(`Listo: se subieron ${r.subidos} registros a la nube. Ya los ven todos los dispositivos.`);
+    let msg = `Listo: se subieron ${r.subidos} registros a la nube. Ya los ven todos los dispositivos.`;
+    if (r.conflictos > 0) {
+      msg += `\n\n⚠️ ${r.conflictos} registro${r.conflictos !== 1 ? 's' : ''} no se ${r.conflictos !== 1 ? 'subieron' : 'subió'} porque la nube ya tenía una versión más nueva. No se pisó nada para no perder ese cambio; si hace falta, revisalos a mano.`;
+    }
+    alert(msg);
     renderSyncBanner();
     renderPage(state.currentPage);
   } else {
@@ -175,11 +184,13 @@ function renderConnStatus() {
   if (!el) return;
   const modo = store.isCloud
     ? '<span class="conn-dot online"></span> Conectado'
-    : (store.sdkFailed
-        ? '<span class="conn-dot local"></span> ⚠️ Sin nube (datos solo en este equipo)'
-        : (store.cloudError
-            ? '<span class="conn-dot local"></span> Modo local · falta correr el schema'
-            : '<span class="conn-dot local"></span> Modo local'));
+    : (store.usingSnapshot
+        ? '<span class="conn-dot local"></span> ⚠️ Sin conexión (copia local)'
+        : (store.sdkFailed
+            ? '<span class="conn-dot local"></span> ⚠️ Sin nube (datos solo en este equipo)'
+            : (store.cloudError
+                ? '<span class="conn-dot local"></span> Modo local · falta correr el schema'
+                : '<span class="conn-dot local"></span> Modo local')));
   const user = currentUser
     ? `<div class="conn-user">
          <span class="conn-user-name">👤 ${escapeHtml(currentUser.nombre)}</span>
