@@ -408,6 +408,64 @@
     // alias semántico
     patch(key, id, fields) { return this.update(key, id, fields); },
 
+    // ---------- ajustes atómicos de contadores (anti "lost update") ----------
+    // sesiones y deuda se tocan con +/- desde varios dispositivos. Si se calcula el
+    // nuevo valor en el cliente sobre un valor viejo, un dispositivo le pisa el cambio
+    // al otro (se "pierde" un pago o una sesión). Estas funciones le piden al server que
+    // haga la suma ATÓMICA (RPC kine_ajustar_*). Si la función no existe (schema sin
+    // migrar) o estamos en modo local, caen al modo viejo (update directo) sin romper.
+    _isMissingFunctionError(error) {
+      const code = (error && error.code) || '';
+      const msg = (error && error.message) || '';
+      return code === 'PGRST202' || code === 'PGRST201' || code === '42883'
+        || /could not find the function|function .* does not exist|schema cache/i.test(msg);
+    },
+
+    async ajustarSesiones(id, delta) {
+      const cur = this.state.pacientes.find(x => x.id === id);
+      if (!cur) return { error: new Error('paciente no encontrado') };
+      this.lastWriteError = null;
+      if (this.isCloud && this._sb) {
+        const { data, error } = await this._sb.rpc('kine_ajustar_sesiones', { p_id: id, p_delta: delta });
+        if (!error) {
+          cur.sesiones = (typeof data === 'number') ? data : Math.max(0, (cur.sesiones || 0) + delta);
+          this.reindex();
+          return { ok: true, sesiones: cur.sesiones };
+        }
+        if (!this._isMissingFunctionError(error)) {
+          this.lastWriteError = error; this._avisarErrorEscritura(error, 'pacientes');
+          return { error };
+        }
+        // función no migrada -> fallback al modo viejo (read-modify-write)
+      }
+      const nuevas = Math.max(0, (cur.sesiones || 0) + delta);
+      await this.update('pacientes', id, { sesiones: nuevas });
+      return this.lastWriteError ? { error: this.lastWriteError } : { ok: true, sesiones: nuevas };
+    },
+
+    async ajustarDeuda(id, delta) {
+      const cur = this.state.pacientes.find(x => x.id === id);
+      if (!cur) return { error: new Error('paciente no encontrado') };
+      this.lastWriteError = null;
+      if (this.isCloud && this._sb) {
+        const { data, error } = await this._sb.rpc('kine_ajustar_deuda', { p_id: id, p_delta: delta });
+        if (!error) {
+          cur.deuda = (typeof data === 'number') ? data : Math.max(0, (cur.deuda || 0) + delta);
+          cur.estado = cur.deuda > 0 ? 'pendiente' : 'pagado';
+          this.reindex();
+          return { ok: true, deuda: cur.deuda, estado: cur.estado };
+        }
+        if (!this._isMissingFunctionError(error)) {
+          this.lastWriteError = error; this._avisarErrorEscritura(error, 'pacientes');
+          return { error };
+        }
+      }
+      const nueva = Math.max(0, (cur.deuda || 0) + delta);
+      const estado = nueva > 0 ? 'pendiente' : 'pagado';
+      await this.update('pacientes', id, { deuda: nueva, estado });
+      return this.lastWriteError ? { error: this.lastWriteError } : { ok: true, deuda: nueva, estado };
+    },
+
     // Borrado RECUPERABLE: la fila va a la papelera y se la saca de su tabla. Se puede
     // restaurar o eliminar definitivamente desde la papelera. Si la papelera todavía no
     // está migrada, cae a borrado normal (para no romper el borrado).

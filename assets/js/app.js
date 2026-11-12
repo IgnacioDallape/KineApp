@@ -781,11 +781,11 @@ async function setAsistenciaTurno(turnoId, estado) {
   const pac = pacienteDeTurno(t);
   if (pac) {
     if (next === 'asistio' && !eraAsistio) {
-      const nuevas = (pac.sesiones || 0) + 1;
-      await store.update('pacientes', pac.id, { sesiones: nuevas });
+      const r = await store.ajustarSesiones(pac.id, +1);
+      const nuevas = (r && typeof r.sesiones === 'number') ? r.sesiones : (pac.sesiones || 0);
       if (pac.sesionesAuth != null && pac.sesionesAuth - nuevas === 0) setTimeout(() => mostrarCompletado(pac), 300);
     } else if (eraAsistio && next !== 'asistio') {
-      await store.update('pacientes', pac.id, { sesiones: Math.max(0, (pac.sesiones || 0) - 1) });
+      await store.ajustarSesiones(pac.id, -1);
     }
   }
   return next;
@@ -845,7 +845,7 @@ async function eliminarTurno(id) {
   // Turno borrado OK: recién ahora revertimos la sesión que había sumado la asistencia.
   if (t && t.asistencia === 'asistio') {
     const pac = pacienteDeTurno(t);
-    if (pac) await store.update('pacientes', pac.id, { sesiones: Math.max(0, (pac.sesiones || 0) - 1) });
+    if (pac) await store.ajustarSesiones(pac.id, -1);
   }
   closeModal('modal-turno-detalle');
   renderAgenda();
@@ -2545,10 +2545,9 @@ async function confirmarCobro() {
   // marcado Pagado NO debe borrar la deuda vieja del paciente.
   if (p && tipo === 'Saldar deuda' && estado === 'Pagado' && p.deuda > 0) {
     if (monto > p.deuda && !confirm(`El monto (${ars(monto)}) es mayor a la deuda (${ars(p.deuda)}).\nSe salda por completo y el excedente NO queda como saldo a favor.\n\n¿Continuar?`)) return;
-    const nueva = Math.max(0, p.deuda - monto);
-    await store.update('pacientes', p.id, { deuda: nueva, estado: nueva <= 0 ? 'pagado' : p.estado });
+    await store.ajustarDeuda(p.id, -monto);
   } else if (p && estado === 'Pendiente') {
-    await store.update('pacientes', p.id, { deuda: (p.deuda || 0) + monto, estado: 'pendiente' });
+    await store.ajustarDeuda(p.id, +monto);
   }
   await store.add('pagos', {
     pacienteId: p?.id || null, paciente: p?.nombre || '',
@@ -2572,12 +2571,9 @@ async function guardarPago() {
     fecha: ymd(new Date()), concepto: tipo, monto, estado
   });
   if (p) {
-    if (estado === 'Pendiente') await store.update('pacientes', p.id, { deuda: (p.deuda || 0) + monto, estado: 'pendiente' });
+    if (estado === 'Pendiente') await store.ajustarDeuda(p.id, +monto);
     // Sólo "Saldar deuda" descuenta de la deuda (un pago por sesión/pack no la borra).
-    else if (tipo === 'Saldar deuda' && estado === 'Pagado' && p.deuda > 0) {
-      const nueva = Math.max(0, p.deuda - monto);
-      await store.update('pacientes', p.id, { deuda: nueva, estado: nueva <= 0 ? 'pagado' : p.estado });
-    }
+    else if (tipo === 'Saldar deuda' && estado === 'Pagado' && p.deuda > 0) await store.ajustarDeuda(p.id, -monto);
   }
   closeModal('modal-pago');
   renderPagos();
