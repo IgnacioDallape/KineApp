@@ -50,6 +50,9 @@
     <div class="nav-item" id="nav-cobranzas" onclick="navigate('cobranzas')">
       <span class="icon" data-icon="cobranzas"></span><span>Cobranzas</span>
     </div>
+    <div class="nav-item" id="nav-estadisticas" onclick="navigate('estadisticas')">
+      <span class="icon" data-icon="estadisticas"></span><span>Estadísticas</span>
+    </div>
   </nav>
   <div class="sidebar-footer">
     <div id="conn-status" class="conn-status"><span class="conn-dot local"></span> Iniciando…</div>
@@ -277,6 +280,15 @@
     </div>
   </div>
 
+  <!-- ESTADÍSTICAS (solo admin) -->
+  <div class="page" id="page-estadisticas">
+    <div class="page-header">
+      <div><h2>Estadísticas</h2><p>Resumen mensual del centro</p></div>
+      <input type="month" class="form-control" id="stats-mes" style="width:auto;min-width:150px" onchange="setStatsMes(this.value)">
+    </div>
+    <div id="estadisticas-content"></div>
+  </div>
+
   <!-- RECORDATORIOS -->
   <div class="page" id="page-recordatorios">
     <div class="page-header">
@@ -422,6 +434,7 @@
 <div id="mas-menu" style="display:none;position:fixed;bottom:70px;right:12px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:300;overflow:hidden;min-width:210px">
   <div id="mas-user" style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg)"></div>
   <div id="mas-cobranzas" onclick="navigate('cobranzas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="cobranzas"></span> Cobranzas</div>
+  <div id="mas-estadisticas" onclick="navigate('estadisticas');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="estadisticas"></span> Estadísticas</div>
   <div onclick="navigate('recordatorios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="recordatorios"></span> Recordatorios</div>
   <div onclick="navigate('servicios');toggleMasMenu()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="servicios"></span> Servicios</div>
   <div class="btn-actualizar" onclick="actualizarApp()" style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;color:var(--primary);border-bottom:1px solid var(--border)"><span class="mas-ico" data-icon="actualizar"></span> Actualizar app</div>

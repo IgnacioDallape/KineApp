@@ -36,7 +36,8 @@
   // Alias de campos que NO siguen la regla camel<->snake automática.
   // (sólo servicios.desc <-> descripcion)
   const ALIASES = { servicios: { desc: 'descripcion' } };
-  const IGNORE_ON_READ = new Set(['created_at', 'updated_at']);
+  // 'created_at' SÍ se lee (como createdAt) -> lo usan las estadísticas (nuevos del mes).
+  const IGNORE_ON_READ = new Set(['updated_at']);
 
   const camelToSnake = s => s.replace(/[A-Z]/g, m => '_' + m.toLowerCase());
   const snakeToCamel = s => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
@@ -381,6 +382,7 @@
     // Insertan/actualizan EN EL LUGAR (sin reasignar arrays) y persisten.
     async add(key, obj) {
       if (!obj.id) obj.id = uuid();
+      if (!obj.createdAt) obj.createdAt = new Date().toISOString();   // fecha de alta (para estadísticas)
       this._upsertCache(key, obj);
       this.lastWriteError = null;
       if (this.isCloud) {

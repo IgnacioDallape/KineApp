@@ -125,10 +125,10 @@ async function subirDatosLocales() {
 }
 
 // Páginas que sólo ve el admin (las dos secciones de plata).
-const ADMIN_ONLY_PAGES = ['cobranzas', 'pagos'];
+const ADMIN_ONLY_PAGES = ['cobranzas', 'pagos', 'estadisticas'];
 // Accesos de navegación (sidebar / "Más" / bottom-nav) a ocultar para staff.
 // nav + cards financieras (pagos pendientes / movimientos de caja del dashboard)
-const ADMIN_ONLY_NAV = ['nav-admin-section', 'nav-cobranzas', 'mas-cobranzas', 'nav-pagos', 'bnav-pagos', 'card-pend', 'card-caja'];
+const ADMIN_ONLY_NAV = ['nav-admin-section', 'nav-cobranzas', 'mas-cobranzas', 'nav-pagos', 'bnav-pagos', 'card-pend', 'card-caja', 'nav-estadisticas', 'mas-estadisticas'];
 
 // Mostrar/ocultar lo que depende del rol (Cobranzas y Gastos: solo admin).
 function applyRolePermissions() {
@@ -249,8 +249,101 @@ function renderPage(page) {
   if (page === 'asistencia') renderAsistencia();
   if (page === 'pagos') renderPagos();
   if (page === 'cobranzas') renderCobranzas();
+  if (page === 'estadisticas') renderEstadisticas();
   if (page === 'recordatorios') renderRecordatorios();
   if (page === 'servicios') renderServicios();
+}
+
+// ===== ESTADÍSTICAS (solo admin) =====
+let statsMes = null;  // 'YYYY-MM' del mes que se está viendo
+function setStatsMes(v) { statsMes = v || ymd(new Date()).slice(0, 7); renderEstadisticas(); }
+function renderEstadisticas() {
+  const hoy = new Date();
+  if (!statsMes) statsMes = ymd(hoy).slice(0, 7);
+  const mes = statsMes, hoyStr = ymd(hoy);
+  const inp = document.getElementById('stats-mes'); if (inp && inp.value !== mes) inp.value = mes;
+  const cont = document.getElementById('estadisticas-content'); if (!cont) return;
+
+  const esOS = p => p.tipoCobertura === 'obra_social';
+  const pacById = id => store.pacienteById(id);
+
+  // Índices de turnos (una pasada): quién tiene turno futuro y quién tuvo turno este mes.
+  const futuros = new Set(), conMes = new Set();
+  state.turnos.forEach(t => {
+    if (!t.pacienteId) return;
+    if ((t.fecha || '').slice(0, 7) === mes) conMes.add(t.pacienteId);
+    if (t.asistencia !== 'reprog' && t.asistencia !== 'ausente' && (t.fecha || '') >= hoyStr) futuros.add(t.pacienteId);
+  });
+
+  // --- CLIENTES ---
+  const nuevos = state.pacientes.filter(p => (p.createdAt || '').slice(0, 7) === mes);
+  const nuevosOS = nuevos.filter(esOS), nuevosPart = nuevos.filter(p => !esOS(p));
+  const terminados = state.pacientes.filter(p =>
+    p.sesionesAuth != null && (p.sesiones || 0) >= p.sesionesAuth && !futuros.has(p.id));
+  const activos = state.pacientes.filter(p => conMes.has(p.id) || futuros.has(p.id));
+  const activosOS = activos.filter(esOS), activosPart = activos.filter(p => !esOS(p));
+
+  // --- FINANZAS ---
+  const pagosMes = state.pagos.filter(p => p.estado === 'Pagado' && (p.fecha || '').slice(0, 7) === mes);
+  const ingresos = pagosMes.reduce((s, p) => s + (p.monto || 0), 0);
+  let ingOS = 0, ingPart = 0; const porServicio = {};
+  pagosMes.forEach(pg => {
+    const pac = pg.pacienteId ? pacById(pg.pacienteId) : null;
+    if (pac && esOS(pac)) ingOS += pg.monto || 0; else ingPart += pg.monto || 0;
+    const serv = (pac && pac.servicio) || 'Sin servicio';
+    porServicio[serv] = (porServicio[serv] || 0) + (pg.monto || 0);
+  });
+  const gastosMesTotal = state.gastos.filter(g => (g.vencimiento || '').slice(0, 7) === mes).reduce((s, g) => s + (g.monto || 0), 0);
+  const balance = ingresos - gastosMesTotal;
+  const deudaTotal = state.pacientes.reduce((s, p) => s + (p.deuda || 0), 0);
+  const deudores = state.pacientes.filter(p => (p.deuda || 0) > 0).length;
+
+  const mesNom = new Date(mes + '-02T12:00').toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  const bigCard = (titulo, valor, sub, color) => `
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px">${titulo}</div>
+      <div style="font-size:30px;font-weight:700;color:${color || 'var(--primary)'};line-height:1;font-variant-numeric:tabular-nums">${valor}</div>
+      ${sub ? `<div style="margin-top:8px;font-size:13px;color:var(--text-muted)">${sub}</div>` : ''}
+    </div>`;
+  const cov = (os, part) => `<span class="badge badge-blue">OS ${os}</span> <span class="badge badge-gray" style="margin-left:4px">Particular ${part}</span>`;
+  const listaPac = (arr, extra) => arr.length
+    ? arr.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')).map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">${coberturaChip(p)}<span style="font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.nombre)}</span></div>
+        <span style="font-size:12px;color:var(--text-muted);flex-shrink:0">${extra(p)}</span>
+      </div>`).join('')
+    : '<p style="color:var(--text-muted);font-size:13px;padding:6px 0">Sin registros este mes.</p>';
+  const maxServ = Math.max(1, ...Object.values(porServicio));
+  const servRows = Object.entries(porServicio).sort((a, b) => b[1] - a[1]).map(([s, m]) => `
+    <div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>${escapeHtml(s)}</span><strong>${ars(m)}</strong></div>
+      <div style="height:7px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.round(m / maxServ * 100)}%;background:var(--primary)"></div></div>
+    </div>`).join('') || '<p style="color:var(--text-muted);font-size:13px">Sin ingresos este mes.</p>';
+
+  cont.innerHTML = `
+    <div class="card-title" style="margin:0 0 10px">Clientes · <span style="text-transform:capitalize;color:var(--text)">${mesNom}</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:24px">
+      ${bigCard('Nuevos clientes del mes', nuevos.length, cov(nuevosOS.length, nuevosPart.length), 'var(--green)')}
+      ${bigCard('Clientes activos', activos.length, cov(activosOS.length, activosPart.length), 'var(--primary)')}
+      ${bigCard('Terminaron y no siguen', terminados.length, 'Agotaron las sesiones autorizadas', 'var(--orange)')}
+    </div>
+
+    <div class="card-title" style="margin:0 0 10px">Ingresos y finanzas · <span style="text-transform:capitalize;color:var(--text)">${mesNom}</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:16px">
+      ${bigCard('Ingresos del mes', ars(ingresos), `OS ${ars(ingOS)} · Particular ${ars(ingPart)}`, 'var(--green)')}
+      ${bigCard('Gastos del mes', ars(gastosMesTotal), 'Por vencimiento en el mes', 'var(--red)')}
+      ${bigCard('Balance del mes', (balance < 0 ? '-' : '') + ars(Math.abs(balance)), balance >= 0 ? 'Ingresos − gastos' : 'En rojo este mes', balance >= 0 ? 'var(--green)' : 'var(--red)')}
+      ${bigCard('Deuda pendiente (hoy)', ars(deudaTotal), `${deudores} paciente${deudores !== 1 ? 's' : ''} con deuda`, deudaTotal > 0 ? 'var(--red)' : 'var(--green)')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-title">Ingresos por servicio</div>${servRows}</div>
+      <div class="card"><div class="card-title">Nuevos clientes (${nuevos.length})</div>${listaPac(nuevos, p => escapeHtml(p.servicio || ''))}</div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Terminaron y no siguen (${terminados.length})</div>
+      ${listaPac(terminados, p => `${p.sesiones}/${p.sesionesAuth} ses.`)}
+    </div>`;
 }
 
 // ===== UTILS =====
