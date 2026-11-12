@@ -387,7 +387,7 @@
       this.lastWriteError = null;
       if (this.isCloud) {
         const { error } = await this._sb.from(TABLES[key]).insert(toRow(key, obj));
-        if (error) { console.error('[KineApp] insert', key, error); this.lastWriteError = error; }
+        if (error) { console.error('[KineApp] insert', key, error); this.lastWriteError = error; this._avisarErrorEscritura(error, key); }
       } else this._persistLocal();
       return obj;
     },
@@ -396,12 +396,15 @@
       const cur = this.state[key].find(x => x.id === id);
       if (cur) Object.assign(cur, fields);
       this.reindex();
+      this.lastWriteError = null;
       if (this.isCloud) {
         const { error } = await this._sb.from(TABLES[key]).update(toRow(key, fields)).eq('id', id);
-        if (error) console.error('[KineApp] update', key, error);
+        if (error) { console.error('[KineApp] update', key, error); this.lastWriteError = error; this._avisarErrorEscritura(error, key); }
       } else this._persistLocal();
       return cur;
     },
+    // Avisa a la app que una escritura a la nube falló (lo engancha app.js con un toast).
+    _avisarErrorEscritura(error, key) { try { if (this.onWriteError) this.onWriteError(error, key); } catch (_) {} },
     // alias semántico
     patch(key, id, fields) { return this.update(key, id, fields); },
 

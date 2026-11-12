@@ -74,6 +74,8 @@ async function startApp() {
   document.getElementById('login-overlay')?.classList.remove('open');
   await store.load();
   store.onChange = handleStoreChange;
+  // Si una escritura a la nube falla, avisamos (antes se perdía en silencio).
+  store.onWriteError = () => showToast('No se pudo guardar en la nube. Revisá la conexión e intentá de nuevo.', 'error');
   store.subscribeRealtime();
   applyRolePermissions();
   renderConnStatus();
@@ -252,6 +254,19 @@ function renderPage(page) {
   if (page === 'estadisticas') renderEstadisticas();
   if (page === 'recordatorios') renderRecordatorios();
   if (page === 'servicios') renderServicios();
+}
+
+// Toast no bloqueante (abajo/centro). tipo: 'error' | 'ok' | 'info'. Reemplaza el anterior.
+let _toastTimer = null;
+function showToast(msg, tipo) {
+  let el = document.getElementById('kine-toast');
+  if (!el) { el = document.createElement('div'); el.id = 'kine-toast'; document.body.appendChild(el); }
+  el.className = 'kine-toast ' + (tipo || 'info');
+  el.textContent = msg;
+  // reinicia la animación aunque ya esté visible
+  void el.offsetWidth; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), tipo === 'error' ? 6000 : 3200);
 }
 
 // ===== ESTADÍSTICAS (solo admin) =====

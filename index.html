@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Kinesico Sport — Centro Kinesiológico</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
@@ -1046,10 +1046,8 @@
       navigator.serviceWorker.register('sw.js').catch(function () {});
     });
   }
-  // Bloquear zoom en mobile (iOS Safari ignora user-scalable=no -> hay que frenar los gestos).
-  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) {
-    document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
-  });
+  // Zoom habilitado (accesibilidad). El doble-tap-zoom ya se evita con
+  // `touch-action: manipulation` en el CSS, sin bloquear el pinch-zoom.
 </script>
 </body>
 </html>

@@ -240,6 +240,18 @@
   .turno-ses { margin-left: auto; flex-shrink: 0; font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.28); padding: 1px 6px; border-radius: 10px; font-variant-numeric: tabular-nums; }
   .turno.bloqueado .turno-ses { background: rgba(0,0,0,0.08); }
   /* Última sesión autorizada: se marca bien visible en la agenda */
+  /* Toast (avisos no bloqueantes, ej. error al guardar en la nube) */
+  .kine-toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+    z-index: 5000; max-width: 90%; padding: 11px 18px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 600; color: #fff; box-shadow: var(--shadow-md);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; text-align: center;
+  }
+  .kine-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .kine-toast.error { background: #b3261e; }
+  .kine-toast.ok { background: var(--green); }
+  .kine-toast.info { background: #2a2a2a; }
+
   .turno.turno-ultima { outline: 2px solid #f5b301; outline-offset: -2px; }
   .turno-ultima-tag { font-size: 9px; font-weight: 800; letter-spacing: 0.03em; color: #ffe08a; }
   .turno-ses.ultima { background: #f5b301; color: #3a2600; }
