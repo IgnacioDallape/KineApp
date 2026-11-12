@@ -55,6 +55,13 @@ $$;
 grant execute on function kine_ajustar_sesiones(uuid, integer) to authenticated;
 grant execute on function kine_ajustar_deuda(uuid, integer)    to authenticated;
 
+-- Defensa en profundidad: Postgres otorga EXECUTE a public por defecto. Lo
+-- quitamos para que SOLO authenticated pueda invocarlas (la RLS ya bloquea a
+-- anon el UPDATE, pero así ni siquiera pueden llamarlas). authenticated conserva
+-- el permiso por el grant explícito de arriba.
+revoke execute on function kine_ajustar_sesiones(uuid, integer) from public;
+revoke execute on function kine_ajustar_deuda(uuid, integer)    from public;
+
 -- =====================================================================
 -- ROLLBACK (si hiciera falta sacar las funciones; la app vuelve sola al
 -- modo viejo). Descomentá y corré:
