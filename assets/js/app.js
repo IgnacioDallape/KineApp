@@ -467,11 +467,29 @@ function populateAgendaProf() {
   sel.value = filtroProf;
 }
 
+// Numera los turnos de cada paciente en orden cronológico (los reprogramados no cuentan),
+// para mostrar "sesión N" en la agenda. Devuelve { turnoId: número }. Al reprogramar o mover
+// un turno, se recalcula en cada render -> los números se reacomodan solos.
+function _mapaSesiones() {
+  const porPac = {};
+  state.turnos.forEach(t => {
+    if (!t.pacienteId || t.asistencia === 'reprog') return;
+    (porPac[t.pacienteId] || (porPac[t.pacienteId] = [])).push(t);
+  });
+  const map = {};
+  Object.values(porPac).forEach(arr => {
+    arr.sort((a, b) => (`${a.fecha} ${a.hora}`).localeCompare(`${b.fecha} ${b.hora}`));
+    arr.forEach((t, i) => { map[t.id] = i + 1; });
+  });
+  return map;
+}
+
 function renderAgenda() {
   const hoy = new Date();
   const horas = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
   renderAgendaFiltros();
   populateAgendaProf();
+  const mapaSes = _mapaSesiones();
 
   const slotHtmlFor = (fechaStr) => (hora) => {
     const horaH = parseInt(hora.split(':')[0]);
@@ -484,6 +502,9 @@ function renderAgenda() {
     return slotTurnos.map(t => {
       const pac = t.pacienteId ? store.pacienteById(t.pacienteId) : null;
       const lesion = (pac && pac.lesion) ? pac.lesion : '';
+      const nSes = mapaSes[t.id];
+      const total = pac && pac.sesionesAuth != null ? pac.sesionesAuth : null;
+      const sesBadge = nSes ? `<span class="turno-ses" title="Sesión ${nSes}${total ? ' de ' + total : ''}">${nSes}${total ? '/' + total : ''}</span>` : '';
       return `
       <div class="turno ${t.servClass}" onclick="event.stopPropagation();mostrarTurno('${t.id}')" title="${escapeHtml(t.paciente)} · ${t.hora}${lesion ? ' · ' + escapeHtml(lesion) : ''}">
         <span class="turno-hora">${t.hora}</span>
@@ -491,6 +512,7 @@ function renderAgenda() {
           <span class="turno-nombre">${escapeHtml(t.paciente)}</span>
           ${lesion ? `<span class="turno-lesion">${escapeHtml(lesion)}</span>` : ''}
         </div>
+        ${sesBadge}
       </div>`;
     }).join('');
   };
