@@ -1977,7 +1977,17 @@ function onObrasSocialChange() {
 
 function openModal(id) {
   populatePacienteSelects();
-  document.getElementById(id).classList.add('open');
+  const _modalEl = document.getElementById(id);
+  _modalEl.classList.add('open');
+  _modalEl.setAttribute('role', 'dialog');
+  _modalEl.setAttribute('aria-modal', 'true');
+  // Foco al primer campo del modal (mejor flujo con teclado).
+  setTimeout(() => {
+    try {
+      const f = _modalEl.querySelector('input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+      if (f) f.focus();
+    } catch (_) {}
+  }, 60);
   if (id === 'modal-turno') {
     resetTurnoForm();
     const pacSearch = document.getElementById('turno-pac-search');
@@ -2000,6 +2010,23 @@ function openModal(id) {
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ===== Accesibilidad por teclado (#8) =====
+// Escape cierra el modal abierto más arriba (sin romper otros usos de Escape).
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const abiertos = document.querySelectorAll('.modal-overlay.open');
+  if (abiertos.length) abiertos[abiertos.length - 1].classList.remove('open');
+});
+// Los ítems de navegación son <div onclick>: los hacemos alcanzables con Tab y
+// activables con Enter/Espacio, sin tocar el HTML ni su estilo.
+document.querySelectorAll('.nav-item, .bnav-item').forEach(el => {
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+  if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+  });
 });
 
 // ===== GUARDAR / MUTACIONES =====
