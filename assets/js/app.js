@@ -36,38 +36,50 @@ function normalizarPaciente(paciente) {
 
 let currentInformePacienteId = null;
 
-// ===== AUTH (usuario + contraseña + roles) =====
-let currentUser = null;                    // { username, nombre, role }
+// ===== AUTH (Supabase Auth + roles) =====
+// El login real lo hace Supabase Auth (email + contraseña cifrada en el server).
+// Acá solo mapeamos el "usuario" tecleado -> email, y el rol (que decide qué
+// pestañas se ven; NO es la seguridad, esa la da RLS + Auth).
+let currentUser = null;                    // { username, nombre, role, email }
 const SESSION_KEY = 'kineapp:session';
 const USERS_DEFAULT = [
-  { username: 'Marcos',   password: '2026',         role: 'admin', nombre: 'Marcos' },
-  { username: 'kinesico', password: 'kinesico1234', role: 'staff', nombre: 'Kinesiólogo' },
+  { username: 'Marcos',   email: 'marcos@kinesico.app',   role: 'admin', nombre: 'Marcos' },
+  { username: 'kinesico', email: 'kinesico@kinesico.app', role: 'staff', nombre: 'Kinesiólogo' },
 ];
 function getUsers() {
   return (window.KINE_USERS && window.KINE_USERS.length) ? window.KINE_USERS : USERS_DEFAULT;
 }
-function publicUser(u) { return { username: u.username, nombre: u.nombre || u.username, role: u.role || 'staff' }; }
-function isAdmin() { return !!currentUser && currentUser.role === 'admin'; }
-function findUser(username, password) {
-  const u = (username || '').trim().toLowerCase();
-  return getUsers().find(x => x.username.toLowerCase() === u && x.password === password) || null;
+function publicUser(u) {
+  return { username: u.username, nombre: u.nombre || u.username, role: u.role || 'staff', email: (u.email || '').toLowerCase() };
 }
-function restoreSession() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return;
-    const s = JSON.parse(raw);
-    const u = getUsers().find(x => x.username.toLowerCase() === (s.username || '').toLowerCase());
-    if (u) currentUser = publicUser(u);
-  } catch (_) { /* sesión corrupta -> pide login */ }
+function isAdmin() { return !!currentUser && currentUser.role === 'admin'; }
+// "Marcos" o "marcos@kinesico.app" -> entrada de KINE_USERS (match por usuario o email).
+function findUserByLogin(login) {
+  const s = (login || '').trim().toLowerCase();
+  return getUsers().find(x =>
+    (x.username || '').toLowerCase() === s || (x.email || '').toLowerCase() === s
+  ) || null;
+}
+// Sesión de Supabase -> currentUser (rol/nombre resueltos por email).
+function userFromSession(sessionUser) {
+  const email = ((sessionUser && sessionUser.email) || '').toLowerCase();
+  const u = getUsers().find(x => (x.email || '').toLowerCase() === email);
+  if (u) return publicUser(u);
+  // Email logueado pero no mapeado en KINE_USERS: entra como staff (defensivo).
+  return { username: email, nombre: (email.split('@')[0] || 'Usuario'), role: 'staff', email };
 }
 
 // ===== BOOT =====
 async function boot() {
   await store.init();
-  restoreSession();
-  if (!currentUser) { showLogin(); return; }
-  await startApp();
+  // Supabase recuerda la sesión: si ya había un login válido, entra directo
+  // (incluso sin internet, mientras el token siga vigente).
+  if (store.isCloud && store.user) {
+    currentUser = userFromSession(store.user);
+    await startApp();
+    return;
+  }
+  showLogin();
 }
 
 async function startApp() {
@@ -199,15 +211,34 @@ function showLogin() {
   setTimeout(() => document.getElementById('login-user')?.focus(), 50);
 }
 async function doLogin() {
-  const username = document.getElementById('login-user').value;
+  const login = document.getElementById('login-user').value;
   const pass = document.getElementById('login-pass').value;
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
-  if (!username || !pass) { errEl.textContent = 'Completá usuario y contraseña.'; return; }
-  const u = findUser(username, pass);
-  if (!u) { errEl.textContent = 'Usuario o contraseña incorrectos.'; return; }
-  currentUser = publicUser(u);
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ username: u.username })); } catch (_) {}
+  if (!login || !pass) { errEl.textContent = 'Completá usuario y contraseña.'; return; }
+  if (!store.isCloud) {
+    errEl.textContent = 'Sin conexión con el servidor. Revisá tu internet y reintentá.';
+    return;
+  }
+  // Resolver el email: por mapeo de KINE_USERS, o lo tecleado si ya es un email.
+  const mapped = findUserByLogin(login);
+  const email = mapped ? mapped.email
+    : (login.includes('@') ? login.trim().toLowerCase() : null);
+  if (!email) { errEl.textContent = 'Usuario o contraseña incorrectos.'; return; }
+
+  const btn = document.getElementById('login-btn');
+  if (btn) { btn.disabled = true; btn.dataset.txt = btn.textContent; btn.textContent = 'Entrando…'; }
+  const { data, error } = await store.signIn(email, pass);
+  if (btn) { btn.disabled = false; if (btn.dataset.txt) btn.textContent = btn.dataset.txt; }
+
+  if (error) {
+    errEl.textContent = /confirm/i.test(error.message || '')
+      ? 'La cuenta no está confirmada en el servidor. Avisale al administrador.'
+      : 'Usuario o contraseña incorrectos.';
+    return;
+  }
+  currentUser = userFromSession(data.user);
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ email })); } catch (_) {}
   document.getElementById('login-pass').value = '';
   await startApp();
 }

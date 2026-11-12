@@ -20,15 +20,18 @@ window.KINE_CONFIG = {
 // =====================================================================
 // Usuarios y roles (login de la app)
 // =====================================================================
-//  role: 'admin'  -> ve TODO, incluida la sección Cobranzas.
-//  role: 'staff'  -> ve todo MENOS Cobranzas.
-//  'nombre' es lo que se muestra como "quién está logeado".
+//  Cada entrada mapea el "usuario" que se teclea (o el email) -> email de
+//  Supabase Auth + rol. Las CONTRASEÑAS ya NO viven acá: están cifradas en
+//  Supabase Auth (dashboard -> Authentication -> Users). Para cambiar una
+//  clave, hacelo desde ese dashboard, nunca desde el código.
 //
-// ⚠️ Estas contraseñas viven en el frontend (cualquiera que mire el código
-//    fuente las puede ver). Sirve para separar roles en una herramienta
-//    interna de confianza. Para seguridad real usá Supabase Auth (ver SETUP.md).
+//  role: 'admin'  -> ve TODO (incluye Gastos, Cobranzas y Estadísticas).
+//  role: 'staff'  -> ve todo MENOS esas secciones de administración.
+//  El rol NO es el candado de seguridad (eso lo da RLS + Auth): solo decide
+//  qué pestañas se muestran. El 'email' debe coincidir EXACTO con el usuario
+//  creado en Supabase Authentication.
 // =====================================================================
 window.KINE_USERS = [
-  { username: 'Marcos',   password: '2026',         role: 'admin', nombre: 'Marcos' },
-  { username: 'kinesico', password: 'kinesico1234', role: 'staff', nombre: 'Kinesiólogo' },
+  { username: 'Marcos',   email: 'marcos@kinesico.app',   role: 'admin', nombre: 'Marcos' },
+  { username: 'kinesico', email: 'kinesico@kinesico.app', role: 'staff', nombre: 'Kinesiólogo' },
 ];
