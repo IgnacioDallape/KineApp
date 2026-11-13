@@ -2412,6 +2412,15 @@ function imprimirFicha(id) {
   window.print();
 }
 
+// Muestra la foto/archivo del pedido médico en el preview del form.
+function _pintarFotoPreview(foto) {
+  const esImg = (foto.src || '').startsWith('data:image');
+  document.getElementById('pac-foto-img').src = foto.src;
+  document.getElementById('pac-foto-img').style.display = esImg ? 'block' : 'none';
+  document.getElementById('pac-foto-nombre').textContent = (esImg ? '' : '📄 ') + (foto.nombre || '');
+  document.getElementById('pac-foto-preview').style.display = 'block';
+  document.getElementById('pac-foto-drop').style.display = 'none';
+}
 function fillPacienteForm(p) {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
   set('pac-nombre', p.nombre); set('pac-dni', p.dni); set('pac-tel', p.tel); set('pac-email', p.email);
@@ -2441,14 +2450,19 @@ function fillPacienteForm(p) {
   const segEdit = document.getElementById('pac-seguimiento-edit');
   if (segEdit) segEdit.style.display = 'block';
   if (p.fotoMedico && p.fotoMedico.src) {
-    const esImg = p.fotoMedico.src.startsWith('data:image');
-    document.getElementById('pac-foto-img').src = p.fotoMedico.src;
-    document.getElementById('pac-foto-img').style.display = esImg ? 'block' : 'none';
-    document.getElementById('pac-foto-nombre').textContent = (esImg ? '' : '📄 ') + (p.fotoMedico.nombre || '');
-    document.getElementById('pac-foto-preview').style.display = 'block';
-    document.getElementById('pac-foto-drop').style.display = 'none';
+    _pintarFotoPreview(p.fotoMedico);
   } else {
     limpiarFotoMedico();
+    // La foto viene bajo demanda: si todavía no se cargó, traerla y mostrarla al llegar.
+    if (p.fotoMedico === undefined) {
+      const _pid = p.id;
+      store.loadFotoMedico(_pid).then(foto => {
+        // Solo pintar si: misma ficha abierta Y el usuario no subió/mostró otra mientras tanto
+        // (si subió una nueva, el preview ya está visible -> no la pisamos).
+        const previewOculto = document.getElementById('pac-foto-preview')?.style.display === 'none';
+        if (foto && foto.src && editingPacienteId === _pid && previewOculto) _pintarFotoPreview(foto);
+      });
+    }
   }
   fillEvalClinica(p.evalClinica);
 }
@@ -2479,7 +2493,15 @@ async function guardarPaciente() {
   const totalPagar = parseInt(document.getElementById('pac-total-pagar').value) || 0;
   const fotoImg = document.getElementById('pac-foto-img').src;
   const fotoNombre = document.getElementById('pac-foto-nombre').textContent.replace(/^📄\s*/, '');
-  const fotoMedico = fotoImg && fotoImg !== window.location.href ? { src: fotoImg, nombre: fotoNombre } : null;
+  const fotoEnForm = fotoImg && fotoImg !== window.location.href ? { src: fotoImg, nombre: fotoNombre } : null;
+  // Anti-pérdida: si estás editando y la foto del pedido médico todavía NO se cargó (viene
+  // bajo demanda) y el form no muestra ninguna, dejamos foto_medico INTACTA en la base
+  // (undefined -> toRow lo omite). Así guardar antes de que cargue la foto nunca la borra.
+  let fotoMedico = fotoEnForm;
+  if (editingPacienteId) {
+    const _cur = state.pacientes.find(x => x.id === editingPacienteId);
+    if (_cur && _cur.fotoMedico === undefined && !fotoEnForm) fotoMedico = undefined;
+  }
 
   const campos = {
     nombre,
@@ -2794,9 +2816,10 @@ function descargarInformePDF() {
   window.generarInformePDF(p, _informeCtx(p));
 }
 
-function verPaciente(id) {
+async function verPaciente(id) {
   const p = obtenerPacienteInforme(id);
   if (!p) return;
+  p.fotoMedico = await store.loadFotoMedico(p.id);   // trae la foto del pedido médico bajo demanda
   const turnPac = store.turnosDePaciente(p.id);
   const asistidos = turnPac.filter(t => t.asistencia === 'asistio').length;
   const coseguroPag = turnPac.filter(t => t.coseguroPagado).length;

@@ -216,9 +216,14 @@
 
     async _loadCloud() {
       this.missingTables = new Set();
-      for (const [key, table] of Object.entries(TABLES)) {
+      // pacientes SIN foto_medico (base64, pesa MB): se trae aparte y bajo demanda al abrir
+      // la ficha/edición. Acelera mucho la carga inicial. (Agregá acá columnas nuevas de
+      // pacientes si cambiás el schema — foto_medico queda afuera a propósito.)
+      const PACIENTE_LITE = 'id,nombre,dni,tel,email,edad,deporte,servicio,motivo,lesion,prof,antecedentes,evaluacion,objetivo,etapa_actual,plan_rehab,progresion,observaciones,sesiones,sesiones_auth,eval_clinica,total_pagar,deuda,estado,tipo_cobertura,obra_social_id,created_at,updated_at';
+      // Las 8 tablas EN PARALELO (antes era una por una -> mucho más lento).
+      await Promise.all(Object.entries(TABLES).map(async ([key, table]) => {
         try {
-          const rows = await this._fetchAll(table);
+          const rows = await this._fetchAll(table, key === 'pacientes' ? PACIENTE_LITE : '*');
           this.state[key] = rows.map(r => fromRow(key, r));
         } catch (e) {
           // Tabla que todavía no existe (ej. 'profesionales' si no corrieron el schema
@@ -232,7 +237,7 @@
             throw e;
           }
         }
-      }
+      }));
     },
 
     // ---------- migración: datos atrapados en este dispositivo ----------
@@ -394,19 +399,37 @@
       return { ok: errores.length === 0, agregados, errores };
     },
 
-    // Supabase corta en 1000 filas/consulta -> traemos por páginas.
-    async _fetchAll(table) {
+    // Supabase corta en 1000 filas/consulta -> traemos por páginas. `columns` permite pedir
+    // solo algunas columnas (ej. pacientes sin la foto base64) para acelerar.
+    async _fetchAll(table, columns = '*') {
       const PAGE = 1000;
       let from = 0, all = [];
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const { data, error } = await this._sb.from(table).select('*').range(from, from + PAGE - 1);
+        const { data, error } = await this._sb.from(table).select(columns).range(from, from + PAGE - 1);
         if (error) throw error;
         all = all.concat(data);
         if (!data || data.length < PAGE) break;
         from += PAGE;
       }
       return all;
+    },
+
+    // Trae la foto del pedido médico (base64) de UN paciente, bajo demanda (no viene en la
+    // carga inicial, para que sea rápida). La cachea en el paciente. SOLO lectura.
+    async loadFotoMedico(id) {
+      const cur = this.state.pacientes.find(p => p.id === id);
+      if (!cur) return null;
+      if (cur.fotoMedico !== undefined) return cur.fotoMedico;   // ya resuelta (objeto o null)
+      if (!(this.isCloud && this._sb)) return (cur.fotoMedico = null);
+      try {
+        const { data, error } = await this._sb.from('pacientes').select('foto_medico').eq('id', id).single();
+        if (error) throw error;
+        cur.fotoMedico = (data && data.foto_medico) || null;
+      } catch (_) {
+        cur.fotoMedico = null;
+      }
+      return cur.fotoMedico;
     },
 
     _loadLocal(fromCloudFail) {
